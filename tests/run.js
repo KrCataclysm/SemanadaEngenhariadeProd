@@ -169,6 +169,22 @@ test('me: lista atividades abertas, minha situação e posição na fila', () =>
   assert.strictEqual(r.atividades.find(x => x.id === 'A15').restantes, 3);
   assert(!r.atividades.some(x => x.id === 'A10'), 'fechadas não aparecem');
 });
+test('aba Atividades mostra ocupadas, restantes e fila como valores (sem fórmulas)', () => {
+  const e = cenario(); [1, 2, 3].forEach(n => e.enroll(n, 'A16'));
+  let a = e.tabela('Atividades').find(x => x.id === 'A16');
+  assert.deepStrictEqual([a.ocupadas, a.restantes, a.na_fila], [2, 0, 1]);
+  assert.strictEqual(e.tabela('Atividades').find(x => x.id === 'A03').restantes, 'sem limite');
+  e.ctx.cancelarInscrito_(e.insc(1).id); a = e.tabela('Atividades').find(x => x.id === 'A16');
+  assert.deepStrictEqual([a.ocupadas, a.restantes, a.na_fila], [2, 0, 0]);
+  assert(!String(a.ocupadas).startsWith('='));
+});
+test('editar vagas na planilha (onEdit) promove a fila e atualiza as contagens', () => {
+  const e = cenario(); [1, 2, 3].forEach(n => e.enroll(n, 'A16'));
+  e.ativ('A16', { vagas_max: 3 });
+  e.ctx.onEdit({ range: { getSheet: () => ({ getName: () => 'Atividades' }), getColumn: () => 7 } });
+  assert.strictEqual(e.status(3, 'A16'), 'CONFIRMADA');
+  assert.strictEqual(e.tabela('Atividades').find(x => x.id === 'A16').restantes, 0);
+});
 test('API: ação desconhecida e JSON inválido não quebram', () => {
   const e = novo(); assert.strictEqual(e.ctx.handle_({ action: 'x' }).ok, false);
   const out = e.ctx.doPost({ postData: { contents: '{ruim' } }); assert(/erro inesperado/.test(JSON.parse(out.s).mensagem));

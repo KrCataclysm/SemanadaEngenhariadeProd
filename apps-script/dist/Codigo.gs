@@ -248,12 +248,6 @@ function setup_() {
       return [p[0], p[1], p[2], p[3], p[4], p[5], '', '', 'NAO', p[6], '', '', ''];
     });
     at.getRange(2, 1, linhas.length, 13).setValues(linhas);
-    for (var i = 0; i < linhas.length; i++) {
-      var r = i + 2;
-      at.getRange(r, 11).setFormula('=COUNTIFS(Inscricoes_Atividades!$C:$C,$A' + r + ',Inscricoes_Atividades!$E:$E,"CONFIRMADA")');
-      at.getRange(r, 12).setFormula('=IF($G' + r + '="","sem limite",MAX(0,$G' + r + '-$K' + r + '))');
-      at.getRange(r, 13).setFormula('=COUNTIFS(Inscricoes_Atividades!$C:$C,$A' + r + ',Inscricoes_Atividades!$E:$E,"FILA")');
-    }
   }
   try {
     var simNao = SpreadsheetApp.newDataValidation().requireValueInList(['SIM', 'NAO'], true).build();
@@ -262,6 +256,7 @@ function setup_() {
     cfg.getRange(2, 2).setDataValidation(abFe);
   } catch (e) { /* validação é opcional */ }
   resetConfigCache_();
+  atualizarContagens_(); // substitui qualquer fórmula antiga nas colunas ocupadas/restantes/na_fila
 }
 
 function installTriggers_() {
@@ -278,6 +273,18 @@ function tick() {
   try { checkMinimos_(); } catch (e) { log_('erro_tick_minimos', 0, String(e)); }
   try { processOutbox_(40); } catch (e) { log_('erro_tick_outbox', 0, String(e)); }
   try { sendAlertDigest_(); } catch (e) { log_('erro_tick_digest', 0, String(e)); }
+}
+
+/** Edição direta na aba Atividades (vagas, abertura): atualiza contagens e promove a fila na hora. */
+function onEdit(e) {
+  try {
+    var sh = e.range.getSheet();
+    if (sh.getName() !== SHEETS.ATIV) return;
+    var col = e.range.getColumn();
+    if (col < 7 || col > 10) return;
+    resetConfigCache_();
+    promoteAll_();
+  } catch (err) { /* a edição nunca deve falhar por causa disto */ }
 }
 
 // ===== Inscricao =====
@@ -509,6 +516,7 @@ function promoteAtividade_(atividade) {
 function promoteAll_() {
   withLock_(function () {
     readAll_(SHEETS.ATIV).forEach(function (a) { promoteAtividade_(a); });
+    atualizarContagensSeguro_();
   });
 }
 
@@ -535,6 +543,7 @@ function cancelarVaga_(iaId) {
     updateRow_(SHEETS.IA, ia._row, { status: 'CANCELADA', posicao: '' });
     var at = getAtividade_(ia.atividade_id);
     var promovidos = at ? promoteAtividade_(at) : 0;
+    atualizarContagensSeguro_();
     return { ok: true, promovidos: promovidos };
   });
 }
@@ -557,6 +566,7 @@ function cancelarInscrito_(inscritoId) {
       var at = getAtividade_(aid);
       if (at) promovidos += promoteAtividade_(at);
     });
+    atualizarContagensSeguro_();
     return { ok: true, promovidos: promovidos };
   });
 }
@@ -567,7 +577,9 @@ function enroll_(p) {
   var res = withLock_(function () {
     var at = getAtividade_(p.atividadeId);
     if (!at) return { ok: false, mensagem: MSG.atividadeInexistente };
-    return enrollCore_(insc, at);
+    var r = enrollCore_(insc, at);
+    if (r.ok) atualizarContagensSeguro_();
+    return r;
   });
   if (res.ok) {
     try { processOutbox_(3); } catch (e) { log_('erro_envio_imediato', 0, String(e)); }
@@ -585,7 +597,9 @@ function inscreverManual_(inscritoId, atividadeId) {
     var copia = {};
     Object.keys(at).forEach(function (k) { copia[k] = at[k]; });
     copia.inscricoes_abertas = 'SIM';
-    return enrollCore_(insc, copia);
+    var r = enrollCore_(insc, copia);
+    if (r.ok) atualizarContagensSeguro_();
+    return r;
   });
   if (res.ok) { try { processOutbox_(3); } catch (e) { /* tick reenvia */ } }
   return res;
@@ -631,6 +645,23 @@ function getPublicConfig_() {
     mensagemFechadas: MSG.fechadas
   };
 }
+
+/** Grava ocupadas, restantes e na_fila na aba Atividades (valores, sem fórmulas: independe do idioma da planilha). */
+function atualizarContagens_() {
+  var ativ = readAll_(SHEETS.ATIV);
+  if (!ativ.length) return;
+  var conf = {}, fila = {};
+  readAll_(SHEETS.IA).forEach(function (r) {
+    if (r.status === 'CONFIRMADA') conf[r.atividade_id] = (conf[r.atividade_id] || 0) + 1;
+    else if (r.status === 'FILA') fila[r.atividade_id] = (fila[r.atividade_id] || 0) + 1;
+  });
+  var sh = sheet_(SHEETS.ATIV);
+  ativ.forEach(function (a) {
+    var max = vagasMax_(a), oc = conf[a.id] || 0;
+    sh.getRange(a._row, 11, 1, 3).setValues([[oc, max === null ? 'sem limite' : Math.max(0, max - oc), fila[a.id] || 0]]);
+  });
+}
+function atualizarContagensSeguro_() { try { atualizarContagens_(); } catch (e) { log_('erro_contagens', 0, String(e)); } }
 
 // ===== Email =====
 /** E-mails (fila de envio, reenvio automático, modelo visual) e resumo de alertas ao organizador. */

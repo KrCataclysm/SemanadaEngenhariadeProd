@@ -55,7 +55,13 @@
       var png = App.qrDataUrl(r.token);
       $('qrImg').src = png; $('qrBaixar').href = png;
       var base = location.href.replace(/index\.html.*$/, '').replace(/[?#].*$/, '');
-      $('linkPessoal').textContent = base + 'atividades.html?t=' + r.token;
+      var link = base + 'atividades.html?t=' + r.token;
+      $('linkPessoal').textContent = link; $('btnLink').href = link;
+      $('btnCopiar').addEventListener('click', function () {
+        var ok = function () { $('copiado').classList.remove('oculto'); };
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(link).then(ok, function () { });
+        else { var t = document.createElement('textarea'); t.value = link; document.body.appendChild(t); t.select(); try { document.execCommand('copy'); ok(); } catch (e) { } document.body.removeChild(t); }
+      });
       $('contatoSucesso').textContent = App.CONTATO;
       window.scrollTo({ top: 0, behavior: 'smooth' });
     });
