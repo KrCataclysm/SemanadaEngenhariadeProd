@@ -1,8 +1,10 @@
 /** Inscrição no evento (fase 1). */
 
-function normNome_(s) { return String(s || '').replace(/\s+/g, ' ').trim(); }
+/** Remove caracteres que fariam a planilha tratar o texto como fórmula (=, +, -, @ no início): injeção de fórmula. */
+function semFormula_(s) { return String(s === undefined || s === null ? '' : s).replace(/^[\s=+\-@]+/, ''); }
+function normNome_(s) { return semFormula_(String(s || '').replace(/\s+/g, ' ').trim()).trim(); }
 function normMatricula_(s) { return String(s || '').replace(/\s+/g, '').toUpperCase(); }
-function normEmail_(s) { return String(s || '').trim().toLowerCase(); }
+function normEmail_(s) { return String(s || '').trim().toLowerCase().replace(/^[=@]+/, ''); }
 
 function maskEmail_(email) {
   var p = String(email).split('@');

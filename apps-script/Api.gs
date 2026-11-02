@@ -13,7 +13,9 @@ function handle_(p) {
     case 'enroll': return enroll_(p);
     case 'scan_lista': return scanLista_(p);
     case 'scan_lote': return scanLote_(p);
-    default: return { ok: false, mensagem: 'Ação desconhecida.' };
+    default:
+      if (/^admin_/.test(String(p.action))) return adminHandle_(p);
+      return { ok: false, mensagem: 'Ação desconhecida.' };
   }
 }
 

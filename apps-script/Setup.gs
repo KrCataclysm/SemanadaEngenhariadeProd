@@ -61,6 +61,14 @@ function setup_() {
   var cfg = sheet_(SHEETS.CONFIG);
   if (cfg.getLastRow() < 2) {
     cfg.getRange(2, 1, DEFAULT_CONFIG.length, 3).setValues(DEFAULT_CONFIG);
+  } else {
+    // Chaves novas de versões posteriores são acrescentadas sem tocar nos valores já definidos.
+    var existentes = {};
+    readAll_(SHEETS.CONFIG).forEach(function (r) { existentes[String(r.chave).trim()] = true; });
+    DEFAULT_CONFIG.forEach(function (d) {
+      if (!existentes[d[0]]) cfg.getRange(cfg.getLastRow() + 1, 1, 1, 3).setValues([d]);
+    });
+    invalidar_(SHEETS.CONFIG);
   }
 
   var at = sheet_(SHEETS.ATIV);

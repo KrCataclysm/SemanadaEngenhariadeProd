@@ -1,27 +1,37 @@
 /** Scanner: PIN, lista local, registro em lote (portaria e atividade), desfazer e permanência. */
 
+var MSG_PIN_ADMIN = {
+  BLOQUEADO: 'Acesso bloqueado temporariamente por excesso de tentativas. Aguarde 5 minutos e tente novamente.',
+  SEM_PIN: 'A senha de administrador (PIN_ADMIN) ainda não foi definida na aba Config da planilha.',
+  FRACO: 'A senha de administrador (PIN_ADMIN) deve ter pelo menos 8 caracteres e ser diferente do PIN do scanner. Ajuste na aba Config da planilha.',
+  INVALIDO: 'Senha incorreta. Verifique a senha de administrador e tente novamente.'
+};
+
 var MSG_PIN = {
   BLOQUEADO: 'Acesso bloqueado temporariamente por excesso de tentativas. Aguarde 5 minutos e tente novamente.',
   SEM_PIN: 'O PIN do scanner ainda não foi definido na aba Config. Defina o PIN e tente novamente.',
   INVALIDO: 'PIN incorreto. Verifique o PIN informado pela organização e tente novamente.'
 };
 
-function checkPin_(pin) {
+function checkPin_(pin, chave, prefixo) {
+  chave = chave || 'PIN'; prefixo = prefixo || 'PIN';
   var props = PropertiesService.getScriptProperties();
-  if (Date.now() < Number(props.getProperty('PIN_BLOQ_ATE') || 0)) return 'BLOQUEADO';
-  var real = String(getConfig_().PIN || '');
+  var kBloq = prefixo + '_BLOQ_ATE', kFalhas = prefixo + '_FALHAS', kDesde = prefixo + '_FALHAS_DESDE';
+  if (Date.now() < Number(props.getProperty(kBloq) || 0)) return 'BLOQUEADO';
+  var cfg = getConfig_(), real = String(cfg[chave] || '');
   if (!real) return 'SEM_PIN';
+  if (chave === 'PIN_ADMIN' && (real.length < 8 || real === String(cfg.PIN || ''))) return 'FRACO';
   // As tentativas erradas valem só dentro de uma janela de 10 minutos: erros isolados, em horas diferentes, não somam.
-  var desde = Number(props.getProperty('PIN_FALHAS_DESDE') || 0);
-  if (desde && Date.now() - desde > 10 * 60000) { props.setProperty('PIN_FALHAS', '0'); props.setProperty('PIN_FALHAS_DESDE', '0'); }
-  if (String(pin === undefined || pin === null ? '' : pin).trim() === real) { props.setProperty('PIN_FALHAS', '0'); props.setProperty('PIN_FALHAS_DESDE', '0'); return 'OK'; }
-  var f = Number(props.getProperty('PIN_FALHAS') || 0) + 1;
-  props.setProperty('PIN_FALHAS', String(f));
-  if (f === 1) props.setProperty('PIN_FALHAS_DESDE', String(Date.now()));
+  var desde = Number(props.getProperty(kDesde) || 0);
+  if (desde && Date.now() - desde > 10 * 60000) { props.setProperty(kFalhas, '0'); props.setProperty(kDesde, '0'); }
+  if (String(pin === undefined || pin === null ? '' : pin).trim() === real) { props.setProperty(kFalhas, '0'); props.setProperty(kDesde, '0'); return 'OK'; }
+  var f = Number(props.getProperty(kFalhas) || 0) + 1;
+  props.setProperty(kFalhas, String(f));
+  if (f === 1) props.setProperty(kDesde, String(Date.now()));
   if (f >= 8) {
-    props.setProperty('PIN_BLOQ_ATE', String(Date.now() + 5 * 60000));
-    props.setProperty('PIN_FALHAS', '0');
-    alert_('PIN_TENTATIVAS', hoje_(), 'Várias tentativas de PIN incorreto no scanner. O acesso foi bloqueado por 5 minutos.');
+    props.setProperty(kBloq, String(Date.now() + 5 * 60000));
+    props.setProperty(kFalhas, '0');
+    alert_(prefixo + '_TENTATIVAS', hoje_(), 'Várias tentativas de ' + (chave === 'PIN_ADMIN' ? 'senha de administrador' : 'PIN') + ' incorretas. O acesso foi bloqueado por 5 minutos.');
   }
   return 'INVALIDO';
 }
@@ -107,7 +117,7 @@ function scanLote_(p) {
         if (!insc) return { clientId: cid, resultado: 'TOKEN_INVALIDO' };
         if (insc.status !== 'ATIVA') return { clientId: cid, resultado: 'CANCELADA', nome: insc.nome };
         var ts = tsValido_(it.ts);
-        var operador = String(it.operador || '').slice(0, 40);
+        var operador = semFormula_(String(it.operador || '').slice(0, 40));
         if (it.modo === 'PORTARIA') {
           var dia = String(it.dia || '');
           if (!/^\d{4}-\d{2}-\d{2}$/.test(dia)) return { clientId: cid, resultado: 'DADOS_INVALIDOS' };
