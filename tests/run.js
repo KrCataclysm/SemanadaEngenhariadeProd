@@ -174,5 +174,81 @@ test('API: ação desconhecida e JSON inválido não quebram', () => {
   const out = e.ctx.doPost({ postData: { contents: '{ruim' } }); assert(/erro inesperado/.test(JSON.parse(out.s).mensagem));
 });
 
+console.log('Scanner');
+function scan() {
+  const e = novo(); e.abrir(); for (let n = 1; n <= 3; n++) e.reg(n);
+  e.setCfg('PIN', '4321');
+  e.lote = (itens, pin) => e.ctx.scanLote_({ pin: pin === undefined ? '4321' : pin, itens });
+  let c = 0; e.por = (n, extra) => Object.assign({ kind: 'scan', modo: 'PORTARIA', dia: '2026-11-11', token: e.token(n), operador: 'Ana', clientId: 'c' + (++c), ts: Date.now(), localMs: 12 }, extra);
+  return e;
+}
+test('PIN: incorreto, ausente e bloqueio após 8 erros (validado no servidor)', () => {
+  const e = scan();
+  assert.strictEqual(e.ctx.scanLista_({ pin: '0000' }).code, 'INVALIDO');
+  assert.strictEqual(e.lote([e.por(1)], 'x').ok, false);
+  for (let i = 0; i < 7; i++) e.ctx.scanLista_({ pin: 'x' });
+  assert.strictEqual(e.ctx.scanLista_({ pin: '4321' }).code, 'BLOQUEADO');
+  assert(e.tabela('Alertas').some(a => a.tipo === 'PIN_TENTATIVAS'));
+  const e2 = novo(); assert.strictEqual(e2.ctx.scanLista_({ pin: '' }).code, 'SEM_PIN');
+});
+test('lista: traz inscritos, atividades e estado atual', () => {
+  const e = scan(); e.lote([e.por(1)]);
+  const l = e.ctx.scanLista_({ pin: '4321' });
+  assert.strictEqual(l.i.length, 3); assert.strictEqual(l.a.length, 20); assert.strictEqual(l.p[e.insc(1).id + '|2026-11-11'], 'ENTRADA');
+});
+test('portaria alterna ENTRADA/SAÍDA por dia e grava segundos, operador e tempo', () => {
+  const e = scan();
+  const r = e.lote([e.por(1), e.por(1), e.por(1), e.por(1, { dia: '2026-11-12' })]).resultados;
+  assert.deepStrictEqual(r.map(x => x.tipo), ['ENTRADA', 'SAIDA', 'ENTRADA', 'ENTRADA']);
+  const linha = e.tabela('Portaria')[0];
+  assert(/^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d$/.test(linha.data_hora)); assert.strictEqual(linha.operador, 'Ana'); assert.strictEqual(linha.local_ms, 12);
+});
+test('leitura repetida (mesmo clientId, reenvio da fila) não duplica', () => {
+  const e = scan(); const it = e.por(1);
+  e.lote([it]); const r = e.lote([it]).resultados[0];
+  assert.strictEqual(r.repetido, true); assert.strictEqual(e.tabela('Portaria').length, 1);
+});
+test('QR inválido e inscrição cancelada são recusados', () => {
+  const e = scan(); e.ctx.cancelarInscrito_(e.insc(2).id);
+  const r = e.lote([e.por(1, { token: 'zzz' }), e.por(2)]).resultados;
+  assert.strictEqual(r[0].resultado, 'TOKEN_INVALIDO'); assert.strictEqual(r[1].resultado, 'CANCELADA'); assert.strictEqual(e.tabela('Portaria').length, 0);
+});
+test('desfazer anula a leitura (sem apagar) e restaura a alternância', () => {
+  const e = scan(); const a = e.por(1), b = e.por(1);
+  e.lote([a, b]); e.lote([{ kind: 'undo', clientId: b.clientId }]);
+  assert.strictEqual(e.tabela('Portaria')[1].status, 'ANULADO');
+  assert.strictEqual(e.lote([e.por(1)]).resultados[0].tipo, 'SAIDA');
+});
+test('atividade: só ENTRADA, repetida = já registrado, sem inscrição = aviso, forçar registra', () => {
+  const e = scan(); e.ativ('A16', { inscricoes_abertas: 'SIM' }); e.enroll(1, 'A16');
+  const at = (n, extra) => e.por(n, Object.assign({ modo: 'ATIVIDADE', atividadeId: 'A16', dia: undefined }, extra));
+  assert.strictEqual(e.lote([at(1)]).resultados[0].resultado, 'REGISTRADO');
+  const rep = e.lote([at(1)]).resultados[0]; assert.strictEqual(rep.resultado, 'JA_REGISTRADO'); assert(/^\d\d:\d\d:\d\d$/.test(rep.horario));
+  const ni = e.lote([at(2)]).resultados[0]; assert.strictEqual(ni.resultado, 'NAO_INSCRITO');
+  assert.strictEqual(e.lote([at(2, { forcar: true })]).resultados[0].forcado, true);
+  const pal = e.lote([e.por(3, { modo: 'ATIVIDADE', atividadeId: 'A03' })]).resultados[0]; // palestra livre
+  assert.strictEqual(pal.resultado, 'REGISTRADO'); assert.strictEqual(e.tabela('Presenca_Atividades').length, 3);
+});
+test('atividade: quem está na fila é sinalizado como NAO_INSCRITO com a situação', () => {
+  const e = scan(); e.ativ('A16', { inscricoes_abertas: 'SIM', vagas_max: 1 }); e.enroll(1, 'A16'); e.enroll(2, 'A16');
+  const r = e.lote([e.por(2, { modo: 'ATIVIDADE', atividadeId: 'A16' })]).resultados[0];
+  assert.strictEqual(r.resultado, 'NAO_INSCRITO'); assert.strictEqual(r.situacao, 'FILA');
+});
+test('horário da leitura vem do aparelho (fila offline), limitado a ±36 h', () => {
+  const e = scan(); const ts = Date.now() - 3600 * 1000;
+  e.lote([e.por(1, { ts }), e.por(2, { ts: 5 })]);
+  const t = e.tabela('Portaria'); assert.strictEqual(t[0].ts, ts); assert(Math.abs(t[1].ts - Date.now()) < 60000);
+});
+test('permanência soma pares entrada→saída, sinaliza saída pendente e gera certificados', () => {
+  const e = scan(); const h = 3600 * 1000, base = Date.now() - 10 * h;
+  e.lote([e.por(1, { ts: base }), e.por(1, { ts: base + 2 * h }), e.por(1, { ts: base + 3 * h }), e.por(1, { ts: base + 4 * h + 30 * 60000 }),
+          e.por(2, { ts: base }), e.por(2, { ts: base + 1 * h }), e.por(2, { ts: base + 2 * h })]);
+  const r = e.ctx.recalcularPermanencia_();
+  const perm = e.tabela('Permanencia'); const cert = e.tabela('Certificados');
+  assert.strictEqual(perm.find(x => x.inscrito_id === e.insc(1).id).minutos, 210);
+  assert.strictEqual(perm.find(x => x.inscrito_id === e.insc(2).id).saida_pendente, 'SIM');
+  assert.strictEqual(cert.find(x => x.inscrito_id === e.insc(1).id).horas, 3.5); assert.strictEqual(r.pendentes, 1);
+});
+
 console.log(`\n${passed} ok, ${failed} falharam`);
 process.exit(failed ? 1 : 0);

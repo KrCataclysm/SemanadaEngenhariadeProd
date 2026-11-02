@@ -31,6 +31,7 @@ function onOpen() {
     .addSeparator()
     .addItem('Reenviar e-mails pendentes agora', 'menuReprocessar')
     .addItem('Recalcular vagas e fila de espera', 'menuRecalcular')
+    .addItem('Recalcular permanência e certificados', 'menuPermanencia')
     .addSeparator()
     .addItem('Editar inscrito (linha selecionada em Inscritos)', 'menuInfoEditar')
     .addItem('Cancelar inscrição no evento (linha selecionada)', 'menuCancelarInscrito')

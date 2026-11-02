@@ -81,3 +81,8 @@ function menuInscreverManual() {
   var res = inscreverManual_(insc.id, resp.getResponseText().trim());
   alerta_('Inscrição em atividade', res.ok ? 'Resultado: ' + res.status + (res.posicao ? ' (posição ' + res.posicao + ')' : '') : res.mensagem);
 }
+
+function menuPermanencia() {
+  var r = recalcularPermanencia_();
+  alerta_('Permanência', 'Calculado para ' + r.pessoas + ' pessoa(s). Veja as abas Permanencia e Certificados. Saídas pendentes: ' + r.pendentes + '.');
+}

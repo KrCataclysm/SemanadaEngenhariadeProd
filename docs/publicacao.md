@@ -31,3 +31,22 @@ Tempo estimado: 15 minutos. Faça com a conta Google que enviará os e-mails.
 - [ ] Cancele a vaga da 1ª pessoa (menu → Cancelar vaga em atividade): a 2ª é promovida e recebe e-mail.
 - [ ] Tente duas atividades no mesmo horário (minicurso × visita): o sistema recusa com explicação.
 - [ ] Apague as inscrições de teste (ou crie outra planilha limpa) antes de abrir ao público.
+
+## 5. Scanner (Fase 2)
+**Atualizar o backend (obrigatório, pois o código mudou):**
+1. Apps Script: apague o código atual, cole o novo `Codigo.gs` e salve.
+2. Planilha: menu **Configurar planilha (primeira vez)** de novo. Não apaga dados; só atualiza os cabeçalhos das abas Portaria e Presenca_Atividades.
+3. **Implantar → Gerenciar implantações → lápis → Versão: Nova versão → Implantar.** A URL continua a mesma.
+4. Aba **Config**: defina o `PIN` (obrigatório; sem PIN o scanner recusa todos).
+
+**Usar:** `…/scanner/` no celular (Chrome/Safari), informe seu nome e o PIN, escolha **Portaria** (dia) ou **Atividade**, toque em *Iniciar leitura* e permita a câmera.
+
+**Checklist de teste do scanner**
+- [ ] PIN errado é recusado; PIN certo carrega a lista de inscritos.
+- [ ] Portaria: 1ª leitura = ENTRADA (verde), 2ª = SAÍDA (azul); a linha aparece na aba Portaria com segundos e seu nome.
+- [ ] Modo avião: leitura continua funcionando; ao reconectar, "Pendentes de envio" volta a 0 e as linhas chegam na planilha.
+- [ ] Atividade com inscrição obrigatória: quem não está confirmado vê o aviso laranja e o botão "Registrar mesmo assim".
+- [ ] Leitura repetida na atividade mostra "Já registrado".
+- [ ] "Desfazer última leitura" marca a linha como ANULADO (não apaga).
+- [ ] "Buscar por nome" registra quando o QR não puder ser lido.
+- [ ] Menu → **Recalcular permanência e certificados** preenche as abas Permanencia e Certificados.

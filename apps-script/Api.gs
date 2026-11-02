@@ -11,6 +11,8 @@ function handle_(p) {
     case 'register': return register_(p);
     case 'me': return getMe_(p);
     case 'enroll': return enroll_(p);
+    case 'scan_lista': return scanLista_(p);
+    case 'scan_lote': return scanLote_(p);
     default: return { ok: false, mensagem: 'Ação desconhecida.' };
   }
 }
