@@ -37,6 +37,7 @@ function buildEmail_(insc, tipo, atividade) {
   var evento = cfg.NOME_EVENTO || 'Semana de Engenharia de Produção';
   var site = String(cfg.SITE_URL || SITE_URL_PADRAO).replace(/\/$/, '');
   var link = site ? site + '/inscricao/atividades.html?t=' + insc.token : '';
+  var linkQr = site ? site + '/inscricao/qr.html?t=' + insc.token : '';
   var assunto, titulo, intro;
   var ia = null;
   if (atividade) {
@@ -70,11 +71,15 @@ function buildEmail_(insc, tipo, atividade) {
     ? '<p style="margin:20px 0 6px;font-weight:700;color:' + COR.azul + '">Suas atividades</p><ul style="margin:0;padding-left:20px">' +
       lista.map(function (x) { return '<li style="margin-bottom:6px">' + esc_(x) + '</li>'; }).join('') + '</ul>'
     : '';
-  var botao = link
-    ? '<p style="margin:24px 0"><a href="' + esc_(link) + '" style="background:' + COR.laranja + ';color:#ffffff;text-decoration:none;font-weight:700;padding:12px 22px;border-radius:6px;display:inline-block">Escolher atividades e consultar fila</a></p>' +
-      '<p style="font-size:12px;color:' + COR.cinza + ';margin:0 0 8px">Este link é pessoal: não o compartilhe.</p>'
+  var botaoQr = linkQr
+    ? '<p style="margin:14px 0 0;font-size:13px;color:' + COR.grafite + '">Se a imagem do QR Code não aparecer, abra-o pelo botão abaixo:</p>' +
+      '<p style="margin:10px 0 0"><a href="' + esc_(linkQr) + '" style="background:' + COR.azul + ';color:#ffffff;text-decoration:none;font-weight:700;padding:12px 22px;border-radius:6px;display:inline-block">Abrir meu QR Code</a></p>'
     : '';
-  var logo = site ? '<img src="' + esc_(site) + '/assets/logo-caepro.png" alt="CAEPRO" width="56" height="56" style="border-radius:50%;background:#fff;display:block">' : '';
+  var botao = link
+    ? '<p style="margin:24px 0"><a href="' + esc_(link) + '" style="background:#C2501A;color:#ffffff;text-decoration:none;font-weight:700;padding:12px 22px;border-radius:6px;display:inline-block">Escolher atividades e consultar fila</a></p>' +
+      '<p style="font-size:12px;color:#555555;margin:0 0 8px">Os links deste e-mail são pessoais: não os compartilhe.</p>'
+    : '';
+  var logo = '<img src="cid:logo" alt="" width="56" height="56" style="border-radius:50%;background:#fff;display:block">';
 
   var html =
     '<div style="background:' + COR.bege + ';padding:24px 12px;font-family:Inter,Arial,sans-serif;color:' + COR.grafite + '">' +
@@ -89,7 +94,7 @@ function buildEmail_(insc, tipo, atividade) {
     '<p style="margin:0 0 18px;line-height:1.5">' + esc_(intro) + '</p>' +
     '<div style="text-align:center;background:' + COR.bege + ';border-radius:8px;padding:18px">' +
     '<div style="font-family:Sora,Arial,sans-serif;font-weight:700;color:' + COR.azul + ';margin-bottom:10px">SEU QR CODE DE ACESSO</div>' +
-    '<img src="cid:qr" alt="QR Code de acesso" width="240" height="240" style="background:#ffffff;padding:8px;border-radius:6px"></div>' +
+    '<img src="cid:qr" alt="QR Code de acesso" width="240" height="240" style="background:#ffffff;padding:8px;border-radius:6px">' + botaoQr + '</div>' +
     listaHtml + botao +
     '<p style="margin:22px 0 6px;font-weight:700;color:' + COR.azul + '">Instruções</p>' +
     '<ul style="margin:0;padding-left:20px;line-height:1.5">' +
@@ -100,7 +105,7 @@ function buildEmail_(insc, tipo, atividade) {
     '</td></tr></table></div>';
 
   var texto = 'Prezado(a) ' + insc.nome + ',\n\n' + intro + '\n\n' + (lista.length ? 'Suas atividades:\n- ' + lista.join('\n- ') + '\n\n' : '') +
-    (link ? 'Link pessoal: ' + link + '\n\n' : '') +
+    (linkQr ? 'Abrir meu QR Code: ' + linkQr + '\n' : '') + (link ? 'Escolher atividades: ' + link + '\n\n' : '') +
     'Apresente o QR Code (anexo ao e-mail) na entrada e na saída em cada dia do evento. Ele é pessoal e intransferível.\n\n' + CONTATO_TXT;
   return { assunto: assunto, html: html, texto: texto };
 }
@@ -111,7 +116,7 @@ function enviarEmail_(insc, tipo, atividade) {
     to: insc.email, subject: e.assunto, body: e.texto, htmlBody: e.html,
     name: getConfig_().NOME_EVENTO || 'Semana de Engenharia de Produção',
     replyTo: getConfig_().EMAIL_CAEPRO || '',
-    inlineImages: { qr: qrBlob_(String(insc.token)) }
+    inlineImages: { qr: qrBlob_(String(insc.token)), logo: logoBlob_() }
   });
 }
 

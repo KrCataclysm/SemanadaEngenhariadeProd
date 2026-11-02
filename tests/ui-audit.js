@@ -45,6 +45,8 @@ const telas = [
   ['inscricao-fechada', B + '/inscricao/index.html', async pg => { aberto = false; await pg.reload(); await pg.waitForSelector('#fechado:not(.oculto)'); aberto = true; }],
   ['inscricao-sucesso', B + '/inscricao/index.html', async pg => { await pg.waitForSelector('#formCard:not(.oculto)'); await pg.fill('#nome', 'Joao da Silva Souza'); await pg.selectOption('#periodo', '3º'); await pg.fill('#matricula', '2025' + String(++seq).padStart(4, '0')); await pg.fill('#email', 'j' + seq + '@exemplo.com'); await pg.fill('#email2', 'j' + seq + '@exemplo.com'); await pg.waitForTimeout(2100); await pg.click('#enviar'); await pg.waitForSelector('#sucesso:not(.oculto)'); }],
   ['atividades', B + '/inscricao/atividades.html?t=' + R.token, '.ativ'],
+  ['qr', B + '/inscricao/qr.html?t=' + R.token, '#ok:not(.oculto)'],
+  ['qr-invalido', B + '/inscricao/qr.html?t=abc', '#invalido:not(.oculto)'],
   ['scanner-login', B + '/scanner/index.html', '#login'],
   ['scanner-modo', B + '/scanner/index.html', loginScanner],
   ['scanner-leitura', B + '/scanner/index.html', async pg => { await loginScanner(pg); await pg.click('label:has(input[value="2026-11-11"]) span'); await pg.click('#btnIniciar'); await pg.waitForSelector('#scan:not(.oculto)'); await pg.evaluate(t => window.__scanner.processar(t, { manual: true }), R.token); }]
