@@ -18,7 +18,11 @@ function handle_(p) {
 }
 
 function handleSeguro_(p) {
-  try { return handle_(p); }
+  try {
+    var migrou = garantirMigracao_();
+    if (p.action === 'versao') return { ok: true, versao: CODIGO_VERSAO, migrou: migrou };
+    return handle_(p);
+  }
   catch (err) {
     if (err && err.code === 'OCUPADO') return { ok: false, code: 'OCUPADO', mensagem: MSG.ocupado };
     log_('erro_api', 0, String(err && err.stack ? err.stack : err));

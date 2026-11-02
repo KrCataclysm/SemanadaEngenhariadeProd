@@ -7,11 +7,15 @@
     "test": "node tests/run.js && node tests/decode.js",
     "test:ui": "node tests/ui-audit.js && node tests/ui-fluxos.js",
     "build": "node scripts/build-codigo.js",
-    "check:dist": "node scripts/build-codigo.js && git diff --exit-code -- apps-script/dist/Codigo.gs"
+    "check:dist": "node scripts/build-codigo.js && git diff --exit-code -- apps-script/dist/Codigo.gs",
+    "prepare:gas": "node scripts/prepare-gas.js"
   },
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "devDependencies": {
     "axe-core": "4.10.0",
-    "playwright": "^1.50.0"
+    "playwright": "^1.50.0",
+    "@google/clasp": "2.5.0"
   }
 }

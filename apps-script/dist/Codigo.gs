@@ -1,6 +1,42 @@
 // Semana de Engenharia de Produção — código único (gerado por scripts/build-codigo.js a partir de apps-script/*.gs).
 // Cole tudo em Código.gs no editor do Apps Script.
 
+// ===== Versao =====
+/** Versão do código em execução. Na publicação automática, o GitHub grava aqui o identificador do commit. */
+var CODIGO_VERSAO = 'dev';
+
+// ===== Migracao =====
+/** Auto-ajuste após cada atualização do código: estrutura da planilha e gatilhos ficam em dia sem ação manual. */
+
+function ensureTriggers_() {
+  var existentes = {};
+  ScriptApp.getProjectTriggers().forEach(function (t) { existentes[t.getHandlerFunction()] = true; });
+  if (!existentes.tick) ScriptApp.newTrigger('tick').timeBased().everyMinutes(10).create();
+  if (!existentes.backupDiario) ScriptApp.newTrigger('backupDiario').timeBased().everyDays(1).atHour(23).create();
+}
+
+/**
+ * Executa a configuração (idempotente: não apaga dados) uma vez por versão de código.
+ * Chamada no início de cada requisição e a cada ciclo do gatilho.
+ */
+function garantirMigracao_() {
+  var props = PropertiesService.getScriptProperties();
+  if (props.getProperty('VERSAO_APLICADA') === CODIGO_VERSAO) return false;
+  try {
+    return withLock_(function () {
+      if (props.getProperty('VERSAO_APLICADA') === CODIGO_VERSAO) return false;
+      setup_();
+      try { ensureTriggers_(); } catch (e) { log_('erro_gatilhos', 0, String(e)); }
+      props.setProperty('VERSAO_APLICADA', CODIGO_VERSAO);
+      log_('migracao', 0, 'versão ' + CODIGO_VERSAO);
+      return true;
+    });
+  } catch (e) {
+    if (e && e.code === 'OCUPADO') return false;   // outra execução está migrando; tenta de novo na próxima
+    throw e;
+  }
+}
+
 // ===== Config =====
 /**
  * Semana de Engenharia de Produção — Credenciamento (backend)
@@ -301,6 +337,7 @@ function installTriggers_() {
 /** Executado pelo gatilho a cada 10 minutos. */
 function tick() {
   resetConfigCache_();
+  try { garantirMigracao_(); ensureTriggers_(); } catch (e) { log_('erro_tick_migracao', 0, String(e)); }
   try { promoteAll_(); } catch (e) { log_('erro_tick_promote', 0, String(e)); }
   try { checkMinimos_(); } catch (e) { log_('erro_tick_minimos', 0, String(e)); }
   try { processOutbox_(40); } catch (e) { log_('erro_tick_outbox', 0, String(e)); }
@@ -1257,7 +1294,11 @@ function handle_(p) {
 }
 
 function handleSeguro_(p) {
-  try { return handle_(p); }
+  try {
+    var migrou = garantirMigracao_();
+    if (p.action === 'versao') return { ok: true, versao: CODIGO_VERSAO, migrou: migrou };
+    return handle_(p);
+  }
   catch (err) {
     if (err && err.code === 'OCUPADO') return { ok: false, code: 'OCUPADO', mensagem: MSG.ocupado };
     log_('erro_api', 0, String(err && err.stack ? err.stack : err));

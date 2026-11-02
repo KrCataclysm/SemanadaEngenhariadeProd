@@ -5,7 +5,7 @@ function makeEnv(opts = {}) {
   const sheets = {};
   const sent = [];
   const props = {};
-  const state = { quota: opts.quota === undefined ? 100 : opts.quota, failSend: false, failMsg: 'falha', clock: 0 };
+  const state = { triggers: [], quota: opts.quota === undefined ? 100 : opts.quota, failSend: false, failMsg: 'falha', clock: 0 };
 
   class Range {
     constructor(sh, r, c, nr, nc) { Object.assign(this, { sh, r, c, nr: nr || 1, nc: nc || 1 }); }
@@ -58,7 +58,11 @@ function makeEnv(opts = {}) {
       }
     },
     PropertiesService: { getScriptProperties: () => ({ getProperty: k => props[k] ?? null, setProperty: (k, v) => { props[k] = v; } }) },
-    ScriptApp: { getProjectTriggers: () => [], deleteTrigger() {}, newTrigger: () => ({ timeBased() { return this; }, everyMinutes() { return this; }, create() {} }) },
+    ScriptApp: {
+      getProjectTriggers: () => state.triggers.map(n => ({ getHandlerFunction: () => n })),
+      deleteTrigger(t) { state.triggers = state.triggers.filter(n => n !== t.getHandlerFunction()); },
+      newTrigger: n => ({ timeBased() { return this; }, everyMinutes() { return this; }, everyDays() { return this; }, atHour() { return this; }, create() { state.triggers.push(n); } })
+    },
     ContentService: { createTextOutput: s => ({ s, setMimeType() { return this; } }), MimeType: { JSON: 'json' } }
   };
   // MailApp.sendEmail aceita (to, subject, body) também
@@ -70,7 +74,7 @@ function makeEnv(opts = {}) {
   })(ctx.MailApp.sendEmail);
   vm.createContext(ctx);
   const dir = path.join(__dirname, '..', 'apps-script');
-  const files = ['Qrcode.gs', 'Config.gs', 'Db.gs', 'Setup.gs', 'Inscricao.gs', 'Atividades.gs', 'Email.gs', 'Scanner.gs', 'Painel.gs', 'Api.gs', 'Admin.gs'];
+  const files = ['Qrcode.gs', 'Versao.gs', 'Migracao.gs', 'Config.gs', 'Db.gs', 'Setup.gs', 'Inscricao.gs', 'Atividades.gs', 'Email.gs', 'Scanner.gs', 'Painel.gs', 'Api.gs', 'Admin.gs'];
   vm.runInContext(files.map(f => fs.readFileSync(path.join(dir, f), 'utf8')).join('\n;\n'), ctx, { filename: 'appscript.js' });
   return { ctx, sheets, sent, state, props, run: code => vm.runInContext(code, ctx) };
 }
