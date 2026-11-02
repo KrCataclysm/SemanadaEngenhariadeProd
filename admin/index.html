@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://script.google.com https://*.googleusercontent.com; base-uri 'self'; form-action 'self'; object-src 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#0F1B2D">
+<meta name="color-scheme" content="light">
+<meta name="robots" content="noindex, nofollow">
+<title>Administração — Semana de Engenharia de Produção</title>
+<link rel="icon" href="../assets/logo-evento.svg" type="image/svg+xml">
+<link rel="icon" href="../assets/icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="preload" href="../assets/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../assets/fonts/sora-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body class="admin">
+<a class="skip" href="#conteudo">Ir para o conteúdo</a>
+<header class="topo"><div class="in">
+  <img class="ev" src="../assets/logo-evento.svg" alt="" width="48" height="48">
+  <div><div class="datas">ADMINISTRAÇÃO</div><div class="nome">Semana de Engenharia de Produção</div></div>
+  <img class="caepro" src="../assets/logo-caepro.png" alt="CAEPRO" width="44" height="44">
+</div></header>
+<noscript><div class="aviso erro">Para utilizar o painel, ative o JavaScript no navegador.</div></noscript>
+<main id="conteudo">
+  <div id="toast" class="toast aviso oculto" role="status" aria-live="polite" tabindex="-1"></div>
+
+  <section id="login" class="card estreito">
+    <h1>Acesso do administrador</h1>
+    <p>Informe seu nome, para registrar as alterações que você fizer, e a senha de administrador.</p>
+    <form id="formLogin">
+      <label for="operador">Seu nome</label><input id="operador" maxlength="40" autocomplete="off" autocapitalize="words" required>
+      <label for="senha">Senha de administrador</label><input id="senha" type="password" autocomplete="off" required>
+      <button class="form-btn" id="btnLogin" type="submit">Entrar</button>
+    </form>
+  </section>
+
+  <div id="app" class="oculto">
+    <h1 class="sr-only">Painel de administração</h1>
+    <div class="linha mb"><div class="grow"><strong id="quem"></strong></div><button type="button" class="sec peq" id="btnSair">Sair</button></div>
+    <div class="tabs" role="tablist" aria-label="Seções">
+      <button type="button" role="tab" id="t-inicio" aria-controls="p-inicio" aria-selected="true">Início</button>
+      <button type="button" role="tab" id="t-inscritos" aria-controls="p-inscritos" aria-selected="false">Inscritos</button>
+      <button type="button" role="tab" id="t-atividades" aria-controls="p-atividades" aria-selected="false">Atividades</button>
+      <button type="button" role="tab" id="t-alertas" aria-controls="p-alertas" aria-selected="false">Alertas e e-mails</button>
+      <button type="button" role="tab" id="t-dados" aria-controls="p-dados" aria-selected="false">Dados</button>
+    </div>
+
+    <section id="p-inicio" role="tabpanel" aria-labelledby="t-inicio"></section>
+
+    <section id="p-inscritos" role="tabpanel" aria-labelledby="t-inscritos" class="oculto">
+      <div class="card">
+        <label for="q" class="sem-topo">Buscar por nome, matrícula ou e-mail</label>
+        <input id="q" autocomplete="off" placeholder="Digite ao menos 2 caracteres">
+        <div id="resBusca" class="topo-1" aria-live="polite"></div>
+      </div>
+      <div id="ficha"></div>
+    </section>
+
+    <section id="p-atividades" role="tabpanel" aria-labelledby="t-atividades" class="oculto"></section>
+    <section id="p-alertas" role="tabpanel" aria-labelledby="t-alertas" class="oculto"></section>
+    <section id="p-dados" role="tabpanel" aria-labelledby="t-dados" class="oculto"></section>
+  </div>
+</main>
+<dialog id="dlg" aria-labelledby="dlgTxt">
+  <form method="dialog">
+    <p id="dlgTxt"></p>
+    <div class="linha"><button type="submit" value="nao" class="sec">Cancelar</button><button type="submit" value="sim" id="dlgSim">Confirmar</button></div>
+  </form>
+</dialog>
+<script src="../inscricao/config.js"></script>
+<script src="../inscricao/comum.js"></script>
+<script src="admin.js"></script>
+</body>
+</html>

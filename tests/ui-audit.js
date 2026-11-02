@@ -7,7 +7,7 @@ const axeSrc = require('axe-core').source;
 const root = path.join(__dirname, '..');
 const env = makeEnv(); env.ctx.setup_();
 const set = (k, v) => { const r = env.ctx.readAll_('Config').find(x => x.chave === k); env.ctx.updateRow_('Config', r._row, { valor: v }); env.ctx.resetConfigCache_(); };
-set('INSCRICOES', 'ABERTAS'); set('PIN', '4321');
+set('INSCRICOES', 'ABERTAS'); set('PIN', '4321'); set('PIN_ADMIN', 'senhaForte123');
 const R = env.ctx.register_({ nome: 'Maria Aparecida da Conceição Albuquerque Siqueira', curso: 'Engenharia de Produção', periodo: '5º', matricula: '20240001', email: 'maria@exemplo.com' });
 ['A10', 'A12', 'A15', 'A16'].forEach(id => { const a = env.ctx.getAtividade_(id); env.ctx.updateRow_('Atividades', a._row, { inscricoes_abertas: 'SIM', vagas_max: id === 'A16' ? 1 : 30 }); });
 env.ctx.enroll_({ token: R.token, atividadeId: 'A16' });
@@ -30,7 +30,14 @@ const srv = http.createServer((req, res) => {
   res.writeHead(200, { 'Content-Type': mime[path.extname(f)] || 'application/octet-stream' }); res.end(fs.readFileSync(f));
 });
 const loginScanner = async pg => { await pg.fill('#operador', 'Ana'); await pg.fill('#pin', '4321'); await pg.click('#btnLogin'); await pg.waitForSelector('#modo:not(.oculto)'); };
+const loginAdmin = async pg => { await pg.fill('#operador', 'Rayan'); await pg.fill('#senha', 'senhaForte123'); await pg.click('#btnLogin'); await pg.waitForSelector('.kpi'); };
 const telas = [
+  ['admin-login', B + '/admin/', '#login'],
+  ['admin-inicio', B + '/admin/', loginAdmin],
+  ['admin-inscritos', B + '/admin/', async pg => { await loginAdmin(pg); await pg.click('#t-inscritos'); await pg.fill('#q', 'maria'); await pg.waitForSelector('#resBusca .item'); await pg.click('#resBusca .item button'); await pg.waitForSelector('#formFicha'); }],
+  ['admin-atividades', B + '/admin/', async pg => { await loginAdmin(pg); await pg.click('#t-atividades'); await pg.waitForSelector('#max-A16'); await pg.click('.card:has(#max-A16) button:has-text("Ver inscritos")'); await pg.waitForSelector('.card:has(#max-A16) table'); }],
+  ['admin-alertas', B + '/admin/', async pg => { await loginAdmin(pg); await pg.click('#t-alertas'); await pg.waitForSelector('text=Reenviar pendentes agora'); }],
+  ['admin-dados', B + '/admin/', async pg => { await loginAdmin(pg); await pg.click('#t-dados'); await pg.waitForSelector('text=Exportar dados'); }],
   ['landing', B + '/index.html', null],
   ['privacidade', B + '/inscricao/privacidade.html', null],
   ['404', B + '/404.html', null],
@@ -58,11 +65,12 @@ const viewports = [[320, 568], [360, 740], [390, 844], [430, 932], [768, 1024], 
       const W = innerWidth, o = { sw: document.documentElement.scrollWidth, W, estouro: [], pequenos: [], fonte: [] };
       document.querySelectorAll('body *').forEach(e => {
         const s = getComputedStyle(e); if (s.display === 'none' || s.visibility === 'hidden' || e.closest('.sr-only')) return;
-        const b = e.getBoundingClientRect(); if (b.width === 0 || e.closest('.skip')) return;
+        const b = e.getBoundingClientRect(); if (b.width === 0 || e.closest('.skip') || e.closest('.tabela-simples')) return;   // tabelas rolam dentro do cartão por desenho
         if (b.right > W + 1 && !e.closest('.video')) o.estouro.push(e.tagName + '.' + e.className + ' ' + Math.round(b.right));
       });
       document.querySelectorAll('button,a.btn,input:not([type=radio]),select,.dias span').forEach(e => {
-        const b = e.getBoundingClientRect(), s = getComputedStyle(e);
+        const alvo = e.type === 'checkbox' && e.closest('label') ? e.closest('label') : e;   // o rótulo clicável é a área de toque da caixa de seleção
+        const b = alvo.getBoundingClientRect(), s = getComputedStyle(e);
         if (s.display === 'none' || b.width === 0 || e.closest('.oculto')) return;
         if (b.height < 44) o.pequenos.push((e.id || e.className || e.tagName) + ' h=' + Math.round(b.height));
         if (['INPUT', 'SELECT'].includes(e.tagName) && parseFloat(s.fontSize) < 16) o.fonte.push(e.id + ' ' + s.fontSize);

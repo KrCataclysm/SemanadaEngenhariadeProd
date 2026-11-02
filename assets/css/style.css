@@ -122,3 +122,29 @@ button.sec, .btn.sec { background: var(--azul); } button.sec:hover, .btn.sec:hov
 dialog { border: 0; border-radius: var(--raio); padding: 1.25rem; max-width: min(28rem, calc(100vw - 2rem)); color: var(--grafite); box-shadow: 0 .5rem 2rem rgba(15, 27, 45, .35); }
 dialog::backdrop { background: rgba(15, 27, 45, .6); }
 dialog p { margin-bottom: 1rem; }
+/* Painel de administração */
+body.admin main, body.admin .topo .in { max-width: 72rem; }
+.tabs { display: flex; gap: .375rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.tabs button { background: #fff; color: var(--azul); border: 2px solid var(--azul); }
+.tabs button[aria-selected="true"] { background: var(--azul); color: #fff; }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr)); gap: .75rem; margin-bottom: 1rem; }
+.kpi { background: #fff; border-radius: var(--raio); padding: .875rem; box-shadow: 0 1px 3px rgba(15, 27, 45, .12); }
+.kpi .n { font-family: var(--f-titulo); font-weight: 700; font-size: 1.75rem; color: var(--azul); line-height: 1.1; }
+.kpi .r { font-size: .8125rem; color: var(--texto-suave); }
+.kpi.alerta .n { color: var(--erro); }
+.linha { display: flex; gap: .75rem; align-items: center; flex-wrap: wrap; }
+.linha > .grow { flex: 1; min-width: 12rem; }
+.item { background: #fff; border-radius: var(--raio); padding: .875rem 1rem; margin-bottom: .5rem; box-shadow: 0 1px 3px rgba(15, 27, 45, .1); }
+.item .sub { font-size: .875rem; color: var(--texto-suave); overflow-wrap: anywhere; }
+.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 0 1rem; }
+button.perigo, .btn.perigo { background: #a8231b; } button.perigo:hover { background: #861912; }
+button.peq { min-height: 2.75rem; padding: .5rem 1rem; }
+.chk { display: flex; align-items: center; gap: .5rem; font-weight: 600; margin: 0; min-height: 2.75rem; }
+.chk input { width: 1.5rem; min-height: 0; height: 1.5rem; }
+.num { max-width: 8rem; }
+.toast { position: sticky; top: .5rem; z-index: 5; }
+.badge.erro { background: #fdecea; color: var(--erro); }
+.tabela-simples { width: 100%; border-collapse: collapse; font-size: .875rem; display: block; overflow-x: auto; max-width: 100%; }   /* no celular, a tabela rola dentro do cartão em vez de espremer as colunas */
+.tabela-simples th, .tabela-simples td { text-align: left; padding: .375rem .625rem; border-bottom: 1px solid #eee; overflow-wrap: break-word; min-width: 5.5rem; vertical-align: top; }
+.tabela-simples th { color: var(--azul); }
+.estreito { max-width: 28rem; } .mb { margin-bottom: .75rem; } .sem-topo { margin-top: 0; } .topo-1 { margin-top: 1rem; }

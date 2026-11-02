@@ -74,7 +74,7 @@ function makeEnv(opts = {}) {
   })(ctx.MailApp.sendEmail);
   vm.createContext(ctx);
   const dir = path.join(__dirname, '..', 'apps-script');
-  const files = ['Qrcode.gs', 'Versao.gs', 'Migracao.gs', 'Config.gs', 'Db.gs', 'Setup.gs', 'Inscricao.gs', 'Atividades.gs', 'Email.gs', 'Scanner.gs', 'Painel.gs', 'Api.gs', 'Admin.gs'];
+  const files = ['Qrcode.gs', 'Versao.gs', 'Migracao.gs', 'Config.gs', 'Db.gs', 'Setup.gs', 'Inscricao.gs', 'Atividades.gs', 'Email.gs', 'Scanner.gs', 'Painel.gs', 'AdminApi.gs', 'Api.gs', 'Admin.gs'];
   vm.runInContext(files.map(f => fs.readFileSync(path.join(dir, f), 'utf8')).join('\n;\n'), ctx, { filename: 'appscript.js' });
   return { ctx, sheets, sent, state, props, run: code => vm.runInContext(code, ctx) };
 }

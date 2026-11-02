@@ -69,3 +69,16 @@ A cada mudança em `apps-script/` mesclada na `main`, o GitHub (`.github/workflo
 **Segurança**
 - O segredo só é lido pelo fluxo de publicação, nunca aparece nos logs, e pull requests de terceiros não têm acesso a ele. O arquivo de credenciais é apagado do executor ao final de cada execução.
 - Ao terminar o evento: revogue o acesso em myaccount.google.com/permissions (procure "clasp"), apague o segredo `CLASPRC_JSON` no GitHub e, se quiser, desative o fluxo (Actions → Publicar no Apps Script → Disable workflow).
+
+## 7. Painel de administração (`/admin/`)
+Endereço: `https://krcataclysm.github.io/SemanadaEngenhariadeProd/admin/` (não aparece em nenhum link público e não é indexado).
+
+**Ativar:** na aba **Config** da planilha, preencha `PIN_ADMIN` com uma senha **de pelo menos 8 caracteres e diferente do PIN do scanner**. Depois da publicação automática, a chave aparece sozinha na aba Config.
+
+**O que faz:** início (indicadores e abrir/fechar inscrições do evento), busca de inscritos por nome, matrícula ou e-mail, ficha (editar dados, reenviar QR, cancelar ou reativar inscrição, inscrever ou tirar de atividades, ver portaria, presenças e e-mails), atividades (vagas máximas e mínimas, abrir e fechar, lista de inscritos e fila), alertas e e-mails pendentes (reenvio) e exportação em CSV.
+
+**Segurança**
+- A senha é conferida no servidor a cada ação; 8 erros em 10 minutos bloqueiam o painel por 5 minutos e geram alerta.
+- O QR (token) nunca é exibido nem exportado. Os CSV protegem contra fórmulas maliciosas ao abrir no Excel.
+- Toda alteração fica registrada na aba **Log** com o nome informado no login.
+- Dados pessoais: baixe CSV só quando necessário e apague depois.
