@@ -492,5 +492,15 @@ test('colunas de texto livre ficam formatadas como texto na planilha', () => {
   ['nome', 'curso', 'periodo', 'email'].forEach(c => assert(fmt.includes(c), c));
 });
 
+test('SITE_URL vazio na planilha: o e-mail mantém o botão (endereço padrão) e a migração preenche o campo', () => {
+  const e = novo(); e.abrir(); e.setCfg('SITE_URL', '');
+  e.reg(1);
+  assert(e.sent[0].htmlBody.includes('/inscricao/atividades.html?t='), 'botão ausente no e-mail');
+  assert(e.sent[0].htmlBody.includes('https://krcataclysm.github.io/SemanadaEngenhariadeProd'));
+  e.ctx.preencherPadroes_(); assert.strictEqual(e.ctx.getConfig_().SITE_URL, 'https://krcataclysm.github.io/SemanadaEngenhariadeProd');
+  e.setCfg('SITE_URL', 'https://outro.exemplo/site/'); e.ctx.preencherPadroes_();
+  assert.strictEqual(e.ctx.getConfig_().SITE_URL, 'https://outro.exemplo/site/', 'não sobrescreve valor preenchido');
+});
+
 console.log(`\n${passed} ok, ${failed} falharam`);
 process.exit(failed ? 1 : 0);
