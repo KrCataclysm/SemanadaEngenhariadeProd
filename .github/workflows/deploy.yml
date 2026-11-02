@@ -30,9 +30,18 @@ jobs:
       - name: Verificar configuração
         id: cfg
         run: |
-          if [ -z "$CLASPRC_JSON" ] || [ -z "$SCRIPT_ID" ] || [ -z "$DEPLOYMENT_ID" ] || [ -z "$WEBAPP_URL" ]; then
+          faltam=""
+          [ -z "$CLASPRC_JSON" ] && faltam="$faltam [SEGREDO] CLASPRC_JSON"
+          [ -z "$SCRIPT_ID" ] && faltam="$faltam [VARIAVEL] SCRIPT_ID"
+          [ -z "$DEPLOYMENT_ID" ] && faltam="$faltam [VARIAVEL] DEPLOYMENT_ID"
+          [ -z "$WEBAPP_URL" ] && faltam="$faltam [VARIAVEL] WEBAPP_URL"
+          if [ -n "$faltam" ]; then
             echo "pronto=nao" >> "$GITHUB_OUTPUT"
-            echo "::notice::Publicação automática ainda não configurada (faltam o segredo ou as variáveis). Os testes passaram; nada foi publicado."
+            if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+              echo "::error::Nada foi publicado. Faltam (nome exato, em Settings > Secrets and variables > Actions):$faltam"
+              exit 1
+            fi
+            echo "::notice::Publicação automática ainda não configurada. Faltam:$faltam. Os testes passaram; nada foi publicado."
           else
             echo "pronto=sim" >> "$GITHUB_OUTPUT"
           fi
