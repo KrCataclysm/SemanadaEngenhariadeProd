@@ -11,9 +11,13 @@ function checkPin_(pin) {
   if (Date.now() < Number(props.getProperty('PIN_BLOQ_ATE') || 0)) return 'BLOQUEADO';
   var real = String(getConfig_().PIN || '');
   if (!real) return 'SEM_PIN';
-  if (String(pin === undefined || pin === null ? '' : pin).trim() === real) { props.setProperty('PIN_FALHAS', '0'); return 'OK'; }
+  // As tentativas erradas valem só dentro de uma janela de 10 minutos: erros isolados, em horas diferentes, não somam.
+  var desde = Number(props.getProperty('PIN_FALHAS_DESDE') || 0);
+  if (desde && Date.now() - desde > 10 * 60000) { props.setProperty('PIN_FALHAS', '0'); props.setProperty('PIN_FALHAS_DESDE', '0'); }
+  if (String(pin === undefined || pin === null ? '' : pin).trim() === real) { props.setProperty('PIN_FALHAS', '0'); props.setProperty('PIN_FALHAS_DESDE', '0'); return 'OK'; }
   var f = Number(props.getProperty('PIN_FALHAS') || 0) + 1;
   props.setProperty('PIN_FALHAS', String(f));
+  if (f === 1) props.setProperty('PIN_FALHAS_DESDE', String(Date.now()));
   if (f >= 8) {
     props.setProperty('PIN_BLOQ_ATE', String(Date.now() + 5 * 60000));
     props.setProperty('PIN_FALHAS', '0');
