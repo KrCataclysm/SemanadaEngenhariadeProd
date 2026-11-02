@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Semana de Engenharia de Produção">
+  <circle cx="32" cy="32" r="30" fill="#0F1B2D"/>
+  <path d="M32 32 L32 6 A26 26 0 0 1 58 32 Z" fill="#D65B1F"/>
+  <circle cx="32" cy="32" r="11" fill="#D9D1C8"/>
+  <circle cx="32" cy="32" r="5" fill="#0F1B2D"/>
+  <circle cx="14" cy="50" r="1.6" fill="#D9D1C8"/><circle cx="20" cy="54" r="1.6" fill="#D9D1C8"/><circle cx="27" cy="57" r="1.6" fill="#D9D1C8"/>
+</svg>

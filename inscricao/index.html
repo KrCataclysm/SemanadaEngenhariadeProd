@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inscrição — Semana de Engenharia de Produção</title>
+<meta name="description" content="Inscrição na Semana de Engenharia de Produção, 11, 12 e 13 de novembro de 2026.">
+<link rel="icon" href="../assets/logo-evento.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Sora:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+<header class="topo"><div class="in">
+  <img class="ev" src="../assets/logo-evento.svg" alt="">
+  <div><div class="datas">11, 12 E 13 DE NOVEMBRO DE 2026</div><div class="nome">Semana de Engenharia de Produção</div></div>
+  <img class="caepro" src="../assets/logo-caepro.png" alt="CAEPRO">
+</div></header>
+<main>
+  <div id="fechado" class="aviso oculto"></div>
+  <section id="formCard" class="card">
+    <h1>Inscrição no evento</h1>
+    <p>Preencha os dados abaixo. Após a inscrição, você receberá um QR Code pessoal, que deverá ser apresentado na entrada e na saída em cada dia do evento. A inscrição nas atividades (oficinas, minicurso, visita técnica e outras) será aberta posteriormente, e você será informado.</p>
+    <div class="dots"></div>
+    <form id="form" novalidate>
+      <label for="nome">Nome completo</label>
+      <input id="nome" name="nome" autocomplete="name" maxlength="120" required>
+      <div class="erro-campo" data-for="nome"></div>
+
+      <label for="curso">Curso</label>
+      <input id="curso" name="curso" list="cursos" value="Engenharia de Produção" maxlength="80" required>
+      <datalist id="cursos"><option value="Engenharia de Produção"><option value="Engenharia Civil"><option value="Engenharia Elétrica"><option value="Engenharia Mecânica"><option value="Administração"><option value="Ciência da Computação"></datalist>
+      <div class="erro-campo" data-for="curso"></div>
+
+      <label for="periodo">Período</label>
+      <select id="periodo" name="periodo" required>
+        <option value="">Selecione</option>
+        <option>1º</option><option>2º</option><option>3º</option><option>4º</option><option>5º</option>
+        <option>6º</option><option>7º</option><option>8º</option><option>9º</option><option>10º</option><option>Outro</option>
+      </select>
+      <div class="erro-campo" data-for="periodo"></div>
+
+      <label for="matricula">Matrícula</label>
+      <input id="matricula" name="matricula" inputmode="numeric" autocomplete="off" maxlength="20" required>
+      <div class="erro-campo" data-for="matricula"></div>
+
+      <label for="email">E-mail (o QR Code será enviado para este endereço)</label>
+      <input id="email" name="email" type="email" autocomplete="email" maxlength="120" required>
+      <div class="erro-campo" data-for="email"></div>
+
+      <button id="enviar" class="form-btn" type="submit">Concluir inscrição</button>
+    </form>
+    <div id="msg" class="aviso oculto" role="status" aria-live="polite"></div>
+  </section>
+
+  <section id="sucesso" class="card oculto">
+    <h1>Inscrição realizada</h1>
+    <div id="msgSucesso" class="aviso ok"></div>
+    <div class="qr">
+      <img id="qrImg" alt="QR Code pessoal de acesso ao evento">
+      <p><a id="qrBaixar" class="btn sec" download="qrcode-semana-eng-producao.gif">Baixar QR Code</a></p>
+    </div>
+    <h2>Link pessoal para as atividades</h2>
+    <p>Guarde este link. Quando as inscrições nas atividades forem abertas, ele permitirá que você escolha as atividades das quais deseja participar e consulte sua posição em filas de espera. O link é pessoal: não o compartilhe.</p>
+    <div id="linkPessoal" class="link-pessoal"></div>
+    <p class="contato" id="contatoSucesso"></p>
+  </section>
+  <p class="contato">Realização: CAEPRO — Centro Acadêmico de Engenharia de Produção. <a href="https://www.instagram.com/caeproufpi">@caeproufpi</a> · <a href="mailto:caepro.ufpi1@gmail.com">caepro.ufpi1@gmail.com</a></p>
+</main>
+<script src="config.js"></script>
+<script src="vendor/qrcode.js"></script>
+<script src="comum.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
