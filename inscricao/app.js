@@ -4,7 +4,12 @@
 
   function limparErros() {
     document.querySelectorAll('.erro-campo').forEach(function (e) { e.textContent = ''; });
+    form.querySelectorAll('[aria-invalid]').forEach(function (e) { e.removeAttribute('aria-invalid'); });
     msg.classList.add('oculto');
+  }
+  function marcarErro(campo, texto) {
+    var el = document.querySelector('[data-for="' + campo + '"]'); if (el) el.textContent = texto;
+    var inp = form.elements[campo]; if (inp) inp.setAttribute('aria-invalid', 'true');
   }
 
   // O formulário só aparece quando o sistema confirma que as inscrições estão abertas.
@@ -33,20 +38,24 @@
     var faltando = false;
     ['nome', 'curso', 'periodo', 'matricula', 'email'].forEach(function (k) {
       if (!String(dados[k]).trim()) {
-        document.querySelector('[data-for="' + k + '"]').textContent = 'Preencha este campo.';
+        marcarErro(k, 'Preencha este campo.');
         faltando = true;
       }
     });
-    if (faltando) { App.aviso(msg, 'erro', 'Preencha todos os campos para concluir a inscrição.'); return; }
+    if (faltando) {
+      App.aviso(msg, 'erro', 'Preencha todos os campos para concluir a inscrição.');
+      var primeiro = form.querySelector('[aria-invalid="true"]'); if (primeiro) primeiro.focus();
+      return;
+    }
 
     btn.disabled = true; btn.textContent = 'Enviando…';
     App.api(dados).then(function (r) {
       btn.disabled = false; btn.textContent = 'Concluir inscrição';
       if (!r.ok) {
-        if (r.erros) Object.keys(r.erros).forEach(function (k) {
-          var el = document.querySelector('[data-for="' + k + '"]'); if (el) el.textContent = r.erros[k];
-        });
-        App.aviso(msg, 'erro', r.mensagem); return;
+        if (r.erros) Object.keys(r.erros).forEach(function (k) { marcarErro(k, r.erros[k]); });
+        App.aviso(msg, 'erro', r.mensagem);
+        var inv = form.querySelector('[aria-invalid="true"]'); if (inv) inv.focus();
+        return;
       }
       if (r.status === 'JA_INSCRITO') { App.aviso(msg, 'ok', r.mensagem); return; }
       $('formCard').classList.add('oculto');
@@ -63,7 +72,7 @@
         else { var t = document.createElement('textarea'); t.value = link; document.body.appendChild(t); t.select(); try { document.execCommand('copy'); ok(); } catch (e) { } document.body.removeChild(t); }
       });
       $('contatoSucesso').textContent = App.CONTATO;
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      $('tSucesso').focus(); window.scrollTo({ top: 0, behavior: 'smooth' });
     });
   });
 })();
