@@ -2,38 +2,49 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://script.google.com https://*.googleusercontent.com; media-src 'self' blob:; worker-src 'self'; manifest-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#0F1B2D">
+<meta name="color-scheme" content="light">
+<meta name="description" content="Inscrição na Semana de Engenharia de Produção, nos dias 11, 12 e 13 de novembro de 2026.">
+<meta name="robots" content="index, follow">
+<meta property="og:type" content="website"><meta property="og:locale" content="pt_BR">
+<meta property="og:title" content="Inscrição — Semana de Engenharia de Produção"><meta property="og:description" content="Inscrição na Semana de Engenharia de Produção, nos dias 11, 12 e 13 de novembro de 2026.">
 <title>Inscrição — Semana de Engenharia de Produção</title>
-<meta name="description" content="Inscrição na Semana de Engenharia de Produção, 11, 12 e 13 de novembro de 2026.">
 <link rel="icon" href="../assets/logo-evento.svg" type="image/svg+xml">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Sora:wght@600;700&display=swap" rel="stylesheet">
+<link rel="icon" href="../assets/icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="../assets/icons/apple-touch-icon.png">
+<link rel="preload" href="../assets/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../assets/fonts/sora-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="../assets/css/style.css">
 </head>
 <body>
+<a class="skip" href="#conteudo">Ir para o conteúdo</a>
 <header class="topo"><div class="in">
-  <img class="ev" src="../assets/logo-evento.svg" alt="">
+  <img class="ev" src="../assets/logo-evento.svg" alt="" width="48" height="48">
   <div><div class="datas">11, 12 E 13 DE NOVEMBRO DE 2026</div><div class="nome">Semana de Engenharia de Produção</div></div>
-  <img class="caepro" src="../assets/logo-caepro.png" alt="CAEPRO">
+  <img class="caepro" src="../assets/logo-caepro.png" alt="CAEPRO — Centro Acadêmico de Engenharia de Produção" width="44" height="44">
 </div></header>
-<main>
-  <section id="carregando" class="card"><p>Verificando se as inscrições estão abertas…</p></section>
+<noscript><div class="aviso erro">Para utilizar esta página, ative o JavaScript no seu navegador. Em caso de dúvidas, entre em contato com a CAEPRO pelo e-mail caepro.ufpi1@gmail.com.</div></noscript>
+<main id="conteudo">
+  <section id="carregando" class="card" role="status"><p>Verificando se as inscrições estão abertas…</p></section>
   <section id="fechado" class="card oculto">
     <h1>Inscrições não disponíveis</h1>
-    <div id="msgFechado" class="aviso erro"></div>
+    <div id="msgFechado" class="aviso erro" role="alert"></div>
     <p><button type="button" class="sec" id="btnRecarregar">Verificar novamente</button></p>
   </section>
   <section id="formCard" class="card oculto">
     <h1>Inscrição no evento</h1>
     <p>Preencha os dados abaixo. Após a inscrição, você receberá um QR Code pessoal, que deverá ser apresentado na entrada e na saída em cada dia do evento. A inscrição nas atividades (oficinas, minicurso, visita técnica e outras) será aberta posteriormente, e você será informado.</p>
-    <div class="dots"></div>
+    <div class="dots" aria-hidden="true"></div>
     <form id="form" novalidate>
       <label for="nome">Nome completo</label>
-      <input id="nome" name="nome" autocomplete="name" maxlength="120" required>
-      <div class="erro-campo" data-for="nome"></div>
+      <input id="nome" name="nome" autocomplete="name" autocapitalize="words" maxlength="120" required aria-describedby="e-nome">
+      <div class="erro-campo" id="e-nome" data-for="nome"></div>
 
       <label for="curso">Curso</label>
-      <select id="curso" name="curso" required>
+      <select id="curso" name="curso" required aria-describedby="e-curso">
         <option>Engenharia de Produção</option>
         <option>Arquitetura e Urbanismo</option>
         <option>Engenharia Civil</option>
@@ -42,44 +53,45 @@
         <option>Engenharia Mecânica</option>
         <option>Outro curso</option>
       </select>
-      <div class="erro-campo" data-for="curso"></div>
+      <div class="erro-campo" id="e-curso" data-for="curso"></div>
 
       <label for="periodo">Período</label>
-      <select id="periodo" name="periodo" required>
+      <select id="periodo" name="periodo" required aria-describedby="e-periodo">
         <option value="">Selecione</option>
         <option>1º</option><option>2º</option><option>3º</option><option>4º</option><option>5º</option>
         <option>6º</option><option>7º</option><option>8º</option><option>9º</option><option>10º</option><option>Outro</option>
       </select>
-      <div class="erro-campo" data-for="periodo"></div>
+      <div class="erro-campo" id="e-periodo" data-for="periodo"></div>
 
       <label for="matricula">Matrícula</label>
-      <input id="matricula" name="matricula" inputmode="numeric" autocomplete="off" maxlength="20" required>
-      <div class="erro-campo" data-for="matricula"></div>
+      <input id="matricula" name="matricula" inputmode="numeric" autocomplete="off" autocapitalize="characters" maxlength="20" required aria-describedby="e-matricula">
+      <div class="erro-campo" id="e-matricula" data-for="matricula"></div>
 
       <label for="email">E-mail (o QR Code será enviado para este endereço)</label>
-      <input id="email" name="email" type="email" autocomplete="email" maxlength="120" required>
-      <div class="erro-campo" data-for="email"></div>
+      <input id="email" name="email" type="email" inputmode="email" autocomplete="email" autocapitalize="none" spellcheck="false" maxlength="120" required aria-describedby="e-email">
+      <div class="erro-campo" id="e-email" data-for="email"></div>
 
       <button id="enviar" class="form-btn" type="submit">Concluir inscrição</button>
     </form>
-    <div id="msg" class="aviso oculto" role="status" aria-live="polite"></div>
+    <div id="msg" class="aviso oculto" role="status" aria-live="polite" tabindex="-1"></div>
+    <p class="contato">Ao concluir a inscrição, você declara ciência de que os dados informados serão tratados pela CAEPRO para a realização do evento, conforme a <a href="privacidade.html">Política de Privacidade</a>.</p>
   </section>
 
-  <section id="sucesso" class="card oculto">
-    <h1>Inscrição realizada</h1>
-    <div id="msgSucesso" class="aviso ok"></div>
+  <section id="sucesso" class="card oculto" aria-labelledby="tSucesso">
+    <h1 id="tSucesso" tabindex="-1">Inscrição realizada</h1>
+    <div id="msgSucesso" class="aviso ok" role="status"></div>
     <div class="qr">
-      <img id="qrImg" alt="QR Code pessoal de acesso ao evento">
+      <img id="qrImg" alt="QR Code pessoal de acesso ao evento" width="280" height="280">
       <p><a id="qrBaixar" class="btn sec" download="qrcode-semana-eng-producao.gif">Baixar QR Code</a></p>
     </div>
     <h2>Link pessoal para as atividades</h2>
     <p>Guarde este link. Quando as inscrições nas atividades forem abertas, ele permitirá que você escolha as atividades das quais deseja participar e consulte sua posição em filas de espera. O link é pessoal: não o compartilhe.</p>
     <p><a id="btnLink" class="btn" href="#">Escolher atividades</a></p>
-    <p><button type="button" class="sec" id="btnCopiar">Copiar link pessoal</button> <span id="copiado" class="contato oculto">Link copiado.</span></p>
+    <p><button type="button" class="sec" id="btnCopiar">Copiar link pessoal</button> <span id="copiado" class="contato oculto" role="status">Link copiado.</span></p>
     <div id="linkPessoal" class="link-pessoal"></div>
     <p class="contato" id="contatoSucesso"></p>
   </section>
-  <p class="contato">Realização: CAEPRO — Centro Acadêmico de Engenharia de Produção. <a href="https://www.instagram.com/caeproufpi">@caeproufpi</a> · <a href="mailto:caepro.ufpi1@gmail.com">caepro.ufpi1@gmail.com</a></p>
+  <p class="contato">Realização: CAEPRO — Centro Acadêmico de Engenharia de Produção. <a href="https://www.instagram.com/caeproufpi" rel="noopener">@caeproufpi</a> · <a href="mailto:caepro.ufpi1@gmail.com">caepro.ufpi1@gmail.com</a> · <a href="privacidade.html">Privacidade</a></p>
 </main>
 <script src="config.js"></script>
 <script src="vendor/qrcode.js"></script>

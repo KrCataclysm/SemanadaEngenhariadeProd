@@ -2,24 +2,36 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://script.google.com https://*.googleusercontent.com; media-src 'self' blob:; worker-src 'self'; manifest-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#0F1B2D">
+<meta name="color-scheme" content="light">
+<meta name="description" content="Escolha das atividades da Semana de Engenharia de Produção pelo link pessoal.">
+<meta name="robots" content="noindex, nofollow">
+<meta property="og:type" content="website"><meta property="og:locale" content="pt_BR">
+<meta property="og:title" content="Atividades — Semana de Engenharia de Produção"><meta property="og:description" content="Escolha das atividades da Semana de Engenharia de Produção pelo link pessoal.">
 <title>Atividades — Semana de Engenharia de Produção</title>
 <link rel="icon" href="../assets/logo-evento.svg" type="image/svg+xml">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Sora:wght@600;700&display=swap" rel="stylesheet">
+<link rel="icon" href="../assets/icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="../assets/icons/apple-touch-icon.png">
+<link rel="preload" href="../assets/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../assets/fonts/sora-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="../assets/css/style.css">
 </head>
 <body>
+<a class="skip" href="#conteudo">Ir para o conteúdo</a>
 <header class="topo"><div class="in">
-  <img class="ev" src="../assets/logo-evento.svg" alt="">
+  <img class="ev" src="../assets/logo-evento.svg" alt="" width="48" height="48">
   <div><div class="datas">11, 12 E 13 DE NOVEMBRO DE 2026</div><div class="nome">Semana de Engenharia de Produção</div></div>
-  <img class="caepro" src="../assets/logo-caepro.png" alt="CAEPRO">
+  <img class="caepro" src="../assets/logo-caepro.png" alt="CAEPRO — Centro Acadêmico de Engenharia de Produção" width="44" height="44">
 </div></header>
-<main>
+<noscript><div class="aviso erro">Para utilizar esta página, ative o JavaScript no seu navegador. Em caso de dúvidas, entre em contato com a CAEPRO pelo e-mail caepro.ufpi1@gmail.com.</div></noscript>
+<main id="conteudo">
   <section class="card">
     <h1>Inscrição nas atividades</h1>
-    <p id="saudacao">Carregando suas informações…</p>
-    <div id="msg" class="aviso oculto" role="status" aria-live="polite"></div>
+    <p id="saudacao" role="status">Carregando suas informações…</p>
+    <div id="msg" class="aviso oculto" role="status" aria-live="polite" tabindex="-1"></div>
     <p class="contato" id="regras">Você não pode se inscrever em duas atividades que ocorram no mesmo dia e em horários que se sobreponham. Quando todas as vagas de uma atividade estiverem ocupadas, você poderá entrar na fila de espera: se uma vaga for liberada, você será inscrito automaticamente e receberá um e-mail.</p>
   </section>
   <div id="lista"></div>

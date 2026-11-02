@@ -1,4 +1,5 @@
-// Semana de Engenharia de Produção — código único (gerado de apps-script/*.gs). Cole tudo em Código.gs.
+// Semana de Engenharia de Produção — código único (gerado por scripts/build-codigo.js a partir de apps-script/*.gs).
+// Cole tudo em Código.gs no editor do Apps Script.
 
 // ===== Config =====
 /**

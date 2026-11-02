@@ -339,5 +339,6 @@
   if (pinSalvo && S.lista && $('operador').value) { S.pin = pinSalvo; S.operador = $('operador').value; irModo(); }
   if (S.fila.length && pinSalvo) { S.pin = pinSalvo; flush(); }
 
+  if ('serviceWorker' in navigator && location.protocol === 'https:') { navigator.serviceWorker.register('sw.js').catch(function () { /* funciona sem o modo offline */ }); }
   window.__scanner = { processar: processar, estado: S }; // usado nos testes automatizados
 })();

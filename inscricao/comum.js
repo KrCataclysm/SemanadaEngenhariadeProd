@@ -17,6 +17,7 @@
     el.textContent = texto;
     el.classList.remove('oculto');
     el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    if (tipo === 'erro' && el.getAttribute('tabindex') === '-1') el.focus({ preventScroll: true });
   }
 
   function qrDataUrl(texto) {
