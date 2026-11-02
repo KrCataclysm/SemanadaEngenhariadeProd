@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Scanner — Semana de Engenharia de Produção</title>
+<link rel="icon" href="../assets/logo-evento.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Sora:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+<header class="topo"><div class="in">
+  <img class="ev" src="../assets/logo-evento.svg" alt="">
+  <div><div class="datas">CREDENCIAMENTO — EQUIPE</div><div class="nome">Semana de Engenharia de Produção</div></div>
+  <img class="caepro" src="../assets/logo-caepro.png" alt="CAEPRO">
+</div></header>
+<main>
+  <section id="login" class="card">
+    <h1>Acesso da equipe</h1>
+    <p>Informe seu nome e o PIN fornecido pela organização para iniciar o credenciamento.</p>
+    <form id="formLogin">
+      <label for="operador">Seu nome</label><input id="operador" maxlength="40" autocomplete="off" required>
+      <label for="pin">PIN</label><input id="pin" type="password" inputmode="numeric" autocomplete="off" required>
+      <button class="form-btn" id="btnLogin" type="submit">Entrar</button>
+    </form>
+    <div id="msgLogin" class="aviso oculto" role="status"></div>
+  </section>
+
+  <section id="modo" class="card oculto">
+    <h1>O que será registrado?</h1>
+    <div class="dias" role="radiogroup" aria-label="Modo">
+      <label><input type="radio" name="modo" value="PORTARIA" checked><span>Portaria (entrada e saída)</span></label>
+      <label><input type="radio" name="modo" value="ATIVIDADE"><span>Atividade (presença)</span></label>
+    </div>
+    <div id="boxDia"><label>Dia do evento</label>
+      <div class="dias" role="radiogroup" aria-label="Dia">
+        <label><input type="radio" name="dia" value="2026-11-11"><span>11/11</span></label>
+        <label><input type="radio" name="dia" value="2026-11-12"><span>12/11</span></label>
+        <label><input type="radio" name="dia" value="2026-11-13"><span>13/11</span></label>
+      </div></div>
+    <div id="boxAtv" class="oculto"><label for="atv">Atividade</label><select id="atv"></select></div>
+    <button class="form-btn" id="btnIniciar" type="button">Iniciar leitura</button>
+    <p class="contato" id="infoLista"></p>
+  </section>
+
+  <section id="scan" class="oculto">
+    <div class="card">
+      <strong id="titModo"></strong>
+      <div class="chips"><span class="chip" id="chRede">Conectando…</span><span class="chip" id="chFila">Pendentes: 0</span><span class="chip" id="chQtd">0 leituras</span></div>
+      <div class="video"><video id="video" playsinline muted></video><div class="mira"></div></div>
+      <div id="res" class="res idle" aria-live="assertive"><div class="t">Aguardando leitura</div><div class="s">Aponte a câmera para o QR Code do participante.</div></div>
+      <div id="acaoExtra" class="linha-btns oculto"></div>
+      <div class="linha-btns">
+        <button type="button" class="sec" id="btnDesfazer">Desfazer última leitura</button>
+        <button type="button" class="sec" id="btnBuscar">Buscar por nome</button>
+        <button type="button" class="sec" id="btnTrocar">Trocar modo</button>
+      </div>
+      <div id="avisoCam" class="aviso erro oculto"></div>
+    </div>
+    <div id="busca" class="card oculto">
+      <label for="q">Nome ou matrícula</label><input id="q" autocomplete="off">
+      <div id="resBusca"></div>
+    </div>
+    <div id="problemas" class="card oculto"><strong>Registros que precisam de conferência</strong><div id="listaProb"></div></div>
+  </section>
+</main>
+<script src="../inscricao/config.js"></script>
+<script src="vendor/jsQR.js"></script>
+<script src="scanner.js"></script>
+</body>
+</html>
