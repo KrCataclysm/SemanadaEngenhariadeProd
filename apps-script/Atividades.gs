@@ -128,6 +128,7 @@ function promoteAtividade_(atividade) {
 function promoteAll_() {
   withLock_(function () {
     readAll_(SHEETS.ATIV).forEach(function (a) { promoteAtividade_(a); });
+    atualizarContagensSeguro_();
   });
 }
 
@@ -154,6 +155,7 @@ function cancelarVaga_(iaId) {
     updateRow_(SHEETS.IA, ia._row, { status: 'CANCELADA', posicao: '' });
     var at = getAtividade_(ia.atividade_id);
     var promovidos = at ? promoteAtividade_(at) : 0;
+    atualizarContagensSeguro_();
     return { ok: true, promovidos: promovidos };
   });
 }
@@ -176,6 +178,7 @@ function cancelarInscrito_(inscritoId) {
       var at = getAtividade_(aid);
       if (at) promovidos += promoteAtividade_(at);
     });
+    atualizarContagensSeguro_();
     return { ok: true, promovidos: promovidos };
   });
 }
@@ -186,7 +189,9 @@ function enroll_(p) {
   var res = withLock_(function () {
     var at = getAtividade_(p.atividadeId);
     if (!at) return { ok: false, mensagem: MSG.atividadeInexistente };
-    return enrollCore_(insc, at);
+    var r = enrollCore_(insc, at);
+    if (r.ok) atualizarContagensSeguro_();
+    return r;
   });
   if (res.ok) {
     try { processOutbox_(3); } catch (e) { log_('erro_envio_imediato', 0, String(e)); }
@@ -204,7 +209,9 @@ function inscreverManual_(inscritoId, atividadeId) {
     var copia = {};
     Object.keys(at).forEach(function (k) { copia[k] = at[k]; });
     copia.inscricoes_abertas = 'SIM';
-    return enrollCore_(insc, copia);
+    var r = enrollCore_(insc, copia);
+    if (r.ok) atualizarContagensSeguro_();
+    return r;
   });
   if (res.ok) { try { processOutbox_(3); } catch (e) { /* tick reenvia */ } }
   return res;
@@ -250,3 +257,20 @@ function getPublicConfig_() {
     mensagemFechadas: MSG.fechadas
   };
 }
+
+/** Grava ocupadas, restantes e na_fila na aba Atividades (valores, sem fórmulas: independe do idioma da planilha). */
+function atualizarContagens_() {
+  var ativ = readAll_(SHEETS.ATIV);
+  if (!ativ.length) return;
+  var conf = {}, fila = {};
+  readAll_(SHEETS.IA).forEach(function (r) {
+    if (r.status === 'CONFIRMADA') conf[r.atividade_id] = (conf[r.atividade_id] || 0) + 1;
+    else if (r.status === 'FILA') fila[r.atividade_id] = (fila[r.atividade_id] || 0) + 1;
+  });
+  var sh = sheet_(SHEETS.ATIV);
+  ativ.forEach(function (a) {
+    var max = vagasMax_(a), oc = conf[a.id] || 0;
+    sh.getRange(a._row, 11, 1, 3).setValues([[oc, max === null ? 'sem limite' : Math.max(0, max - oc), fila[a.id] || 0]]);
+  });
+}
+function atualizarContagensSeguro_() { try { atualizarContagens_(); } catch (e) { log_('erro_contagens', 0, String(e)); } }

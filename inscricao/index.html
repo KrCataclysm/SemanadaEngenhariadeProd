@@ -33,8 +33,15 @@
       <div class="erro-campo" data-for="nome"></div>
 
       <label for="curso">Curso</label>
-      <input id="curso" name="curso" list="cursos" value="Engenharia de Produção" maxlength="80" required>
-      <datalist id="cursos"><option value="Engenharia de Produção"><option value="Engenharia Civil"><option value="Engenharia Elétrica"><option value="Engenharia Mecânica"><option value="Administração"><option value="Ciência da Computação"></datalist>
+      <select id="curso" name="curso" required>
+        <option>Engenharia de Produção</option>
+        <option>Arquitetura e Urbanismo</option>
+        <option>Engenharia Civil</option>
+        <option>Engenharia de Materiais</option>
+        <option>Engenharia Elétrica</option>
+        <option>Engenharia Mecânica</option>
+        <option>Outro curso</option>
+      </select>
       <div class="erro-campo" data-for="curso"></div>
 
       <label for="periodo">Período</label>
@@ -67,6 +74,8 @@
     </div>
     <h2>Link pessoal para as atividades</h2>
     <p>Guarde este link. Quando as inscrições nas atividades forem abertas, ele permitirá que você escolha as atividades das quais deseja participar e consulte sua posição em filas de espera. O link é pessoal: não o compartilhe.</p>
+    <p><a id="btnLink" class="btn" href="#">Escolher atividades</a></p>
+    <p><button type="button" class="sec" id="btnCopiar">Copiar link pessoal</button> <span id="copiado" class="contato oculto">Link copiado.</span></p>
     <div id="linkPessoal" class="link-pessoal"></div>
     <p class="contato" id="contatoSucesso"></p>
   </section>
