@@ -50,3 +50,22 @@ Tempo estimado: 15 minutos. Faça com a conta Google que enviará os e-mails.
 - [ ] "Desfazer última leitura" marca a linha como ANULADO (não apaga).
 - [ ] "Buscar por nome" registra quando o QR não puder ser lido.
 - [ ] Menu → **Recalcular permanência e certificados** preenche as abas Permanencia e Certificados.
+
+## 6. Publicação automática do backend (sem copiar e colar)
+A cada mudança em `apps-script/` mesclada na `main`, o GitHub (`.github/workflows/deploy.yml`) roda os testes, envia o código ao Apps Script, publica uma nova versão **na mesma URL** e confere o sistema no ar. Se a conferência falhar, volta sozinho à versão anterior. A planilha e os gatilhos se ajustam sozinhos na primeira requisição depois de cada publicação.
+
+**Configuração única (computador, ~10 min)**
+1. Apps Script → *Configurações do projeto*: copie o **ID do script**. Em script.google.com/home/usersettings, ative a **API do Google Apps Script**.
+2. Instale o Node.js e rode `npx @google/clasp@2.5.0 login`. Autorize no navegador. Isso cria o arquivo `.clasprc.json` na sua pasta de usuário.
+3. GitHub → Settings → Secrets and variables → Actions:
+   - **Secrets → New repository secret:** nome `CLASPRC_JSON`, valor = todo o conteúdo do `.clasprc.json`.
+   - **Variables → New repository variable:** `SCRIPT_ID` (ID do script), `DEPLOYMENT_ID` (Implantar → Gerenciar implantações → ID da implantação do App da Web) e `WEBAPP_URL` (a URL `/exec`).
+4. Em Actions → *Publicar no Apps Script* → **Run workflow** (primeira publicação). Esse primeiro envio **substitui** o código antigo (`Código.gs`) pelos arquivos do repositório.
+
+**Depois disso:** não edite mais o código no editor do Apps Script (o próximo envio apaga a edição). O que você ajusta no dia a dia fica na planilha (Config, Atividades).
+
+**Quando um recurso novo exigir permissão nova do Google** (raro), eu aviso: basta abrir a planilha e usar uma vez qualquer item do menu *Semana de Eng. Produção* para autorizar.
+
+**Segurança**
+- O segredo só é lido pelo fluxo de publicação, nunca aparece nos logs, e pull requests de terceiros não têm acesso a ele. O arquivo de credenciais é apagado do executor ao final de cada execução.
+- Ao terminar o evento: revogue o acesso em myaccount.google.com/permissions (procure "clasp"), apague o segredo `CLASPRC_JSON` no GitHub e, se quiser, desative o fluxo (Actions → Publicar no Apps Script → Disable workflow).

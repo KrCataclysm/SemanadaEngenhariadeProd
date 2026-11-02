@@ -331,5 +331,34 @@ test('cópia de segurança devolve o endereço da cópia', () => {
   const e = novo(); assert(/^https:\/\/exemplo\/Backup/.test(e.ctx.criarBackup_()));
 });
 
+console.log('Publicação automática');
+test('migração por versão: roda uma vez, instala gatilhos e a ação "versao" informa o código em execução', () => {
+  const e = makeEnv(); e.ctx.setup_();
+  const r1 = e.ctx.handleSeguro_({ action: 'versao' });
+  assert.strictEqual(r1.ok, true); assert.strictEqual(r1.migrou, true); assert.strictEqual(r1.versao, 'dev');
+  assert.deepStrictEqual(e.state.triggers.sort(), ['backupDiario', 'tick']);
+  assert.strictEqual(e.ctx.handleSeguro_({ action: 'versao' }).migrou, false);
+  e.run("CODIGO_VERSAO = 'abc1234'");                       // simula nova publicação
+  assert.strictEqual(e.ctx.handleSeguro_({ action: 'versao' }).migrou, true);
+  assert.strictEqual(e.state.triggers.length, 2, 'gatilhos não duplicam');
+});
+test('gatilho apagado por engano é recriado no próximo ciclo', () => {
+  const e = makeEnv(); e.ctx.setup_(); e.ctx.garantirMigracao_();
+  e.state.triggers = ['tick'];
+  e.ctx.tick(); assert.deepStrictEqual(e.state.triggers.sort(), ['backupDiario', 'tick']);
+});
+test('migração preserva dados existentes (não apaga inscritos nem atividades editadas)', () => {
+  const e = novo(); e.abrir(); e.reg(1); e.ativ('A16', { vagas_max: 7 });
+  e.ctx.garantirMigracao_();
+  assert.strictEqual(e.tabela('Inscritos').length, 1); assert.strictEqual(e.ctx.getAtividade_('A16').vagas_max, 7);
+});
+test('prepare-gas: envia só os .gs separados, sem dist/, e grava a versão do commit', () => {
+  const { execFileSync } = require('child_process'), fs = require('fs'), path = require('path');
+  execFileSync('node', [path.join(__dirname, '..', 'scripts', 'prepare-gas.js')], { env: Object.assign({}, process.env, { GITHUB_SHA: 'deadbeefcafe' }), stdio: 'pipe' });
+  const dir = path.join(__dirname, '..', 'build', 'gas'), arqs = fs.readdirSync(dir);
+  assert(arqs.includes('appsscript.json') && arqs.includes('Api.gs') && !arqs.includes('Codigo.gs'));
+  assert(/CODIGO_VERSAO = 'deadbee'/.test(fs.readFileSync(path.join(dir, 'Versao.gs'), 'utf8')));
+});
+
 console.log(`\n${passed} ok, ${failed} falharam`);
 process.exit(failed ? 1 : 0);

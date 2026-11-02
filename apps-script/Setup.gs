@@ -92,6 +92,7 @@ function installTriggers_() {
 /** Executado pelo gatilho a cada 10 minutos. */
 function tick() {
   resetConfigCache_();
+  try { garantirMigracao_(); ensureTriggers_(); } catch (e) { log_('erro_tick_migracao', 0, String(e)); }
   try { promoteAll_(); } catch (e) { log_('erro_tick_promote', 0, String(e)); }
   try { checkMinimos_(); } catch (e) { log_('erro_tick_minimos', 0, String(e)); }
   try { processOutbox_(40); } catch (e) { log_('erro_tick_outbox', 0, String(e)); }
