@@ -207,6 +207,15 @@ test('PIN: incorreto, ausente e bloqueio após 8 erros (validado no servidor)', 
   assert(e.tabela('Alertas').some(a => a.tipo === 'PIN_TENTATIVAS'));
   const e2 = novo(); assert.strictEqual(e2.ctx.scanLista_({ pin: '' }).code, 'SEM_PIN');
 });
+test('PIN: erros antigos (mais de 10 min) não somam; erros seguidos continuam bloqueando', () => {
+  const e = scan();
+  for (let i = 0; i < 7; i++) e.ctx.scanLista_({ pin: 'x' });
+  e.props.PIN_FALHAS_DESDE = String(Date.now() - 11 * 60000);            // as 7 tentativas ficaram para trás
+  assert.strictEqual(e.ctx.scanLista_({ pin: 'x' }).code, 'INVALIDO');   // conta como a 1ª, não bloqueia
+  assert.strictEqual(e.ctx.scanLista_({ pin: '4321' }).ok, true);         // PIN certo funciona e zera
+  for (let i = 0; i < 8; i++) e.ctx.scanLista_({ pin: 'x' });
+  assert.strictEqual(e.ctx.scanLista_({ pin: '4321' }).code, 'BLOQUEADO');
+});
 test('lista: traz inscritos, atividades e estado atual', () => {
   const e = scan(); e.lote([e.por(1)]);
   const l = e.ctx.scanLista_({ pin: '4321' });
