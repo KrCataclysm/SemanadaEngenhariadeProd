@@ -17,19 +17,24 @@ function handle_(p) {
   }
 }
 
+function handleSeguro_(p) {
+  try { return handle_(p); }
+  catch (err) {
+    if (err && err.code === 'OCUPADO') return { ok: false, code: 'OCUPADO', mensagem: MSG.ocupado };
+    log_('erro_api', 0, String(err && err.stack ? err.stack : err));
+    return { ok: false, code: 'ERRO', mensagem: MSG.erroInterno };
+  }
+}
+
 function doGet(e) {
   var p = (e && e.parameter) || {};
   if (!p.action) p.action = 'config';
-  try { return json_(handle_(p)); }
-  catch (err) { log_('erro_api', 0, String(err)); return json_({ ok: false, mensagem: MSG.erroInterno }); }
+  return json_(handleSeguro_(p));
 }
 
 function doPost(e) {
-  try {
-    var p = JSON.parse(e.postData.contents);
-    return json_(handle_(p));
-  } catch (err) {
-    log_('erro_api', 0, String(err));
-    return json_({ ok: false, mensagem: MSG.erroInterno });
-  }
+  var p;
+  try { p = JSON.parse(e.postData.contents); }
+  catch (err) { return json_({ ok: false, code: 'ERRO', mensagem: MSG.erroInterno }); }
+  return json_(handleSeguro_(p));
 }

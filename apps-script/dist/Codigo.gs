@@ -18,7 +18,9 @@ var SHEETS = {
   PORTARIA: 'Portaria',
   PRES: 'Presenca_Atividades',
   PERM: 'Permanencia',
-  CERT: 'Certificados'
+  CERT: 'Certificados',
+  PAINEL: 'Painel',
+  BASE: 'Base_Analise'
 };
 
 var HEADERS = {};
@@ -36,6 +38,8 @@ HEADERS[SHEETS.PORTARIA] = ['inscrito_id', 'dia', 'tipo', 'data_hora', 'operador
 HEADERS[SHEETS.PRES] = ['inscrito_id', 'atividade_id', 'data_hora', 'operador', 'status', 'client_id', 'ts', 'local_ms', 'server_ms'];
 HEADERS[SHEETS.PERM] = ['inscrito_id', 'dia', 'minutos', 'saida_pendente'];
 HEADERS[SHEETS.CERT] = ['inscrito_id', 'horas', 'observacao'];
+HEADERS[SHEETS.BASE] = ['inscrito_id', 'nome', 'curso', 'periodo', 'matricula', 'email', 'data_inscricao', 'status', 'status_email',
+  'atividades_confirmadas', 'atividades_em_fila', 'presencas_em_atividades', 'dias_presentes', 'minutos_permanencia', 'horas', 'saida_pendente'];
 
 /** Colunas que precisam ficar como texto (evita converter "0123" ou tokens em número). */
 var TEXT_COLUMNS = {};
@@ -49,6 +53,7 @@ TEXT_COLUMNS[SHEETS.PORTARIA] = ['inscrito_id', 'dia', 'data_hora', 'client_id']
 TEXT_COLUMNS[SHEETS.PRES] = ['inscrito_id', 'atividade_id', 'data_hora', 'client_id'];
 TEXT_COLUMNS[SHEETS.PERM] = ['inscrito_id', 'dia'];
 TEXT_COLUMNS[SHEETS.CERT] = ['inscrito_id'];
+TEXT_COLUMNS[SHEETS.BASE] = ['inscrito_id', 'matricula', 'data_inscricao'];
 
 var DEFAULT_CONFIG = [
   ['INSCRICOES', 'FECHADAS', 'ABERTAS ou FECHADAS: controla a inscrição no evento.'],
@@ -74,6 +79,8 @@ var MSG = {
   jaNaAtividade: 'Você já está inscrito, ou na fila de espera, desta atividade.',
   conflito: 'Não foi possível inscrever você nesta atividade, pois ela ocorre no mesmo dia e em horário que coincide com outra atividade na qual você já está inscrito: %TITULO% (%HORARIO%).',
   atividadeInexistente: 'A atividade informada não foi encontrada.',
+  ocupado: 'O sistema está recebendo muitas solicitações neste momento. Aguarde alguns instantes e tente novamente. ' + CONTATO_TXT,
+  rapido: 'Não foi possível concluir o envio. Aguarde alguns segundos e envie o formulário novamente.',
   erroInterno: 'Ocorreu um erro inesperado ao processar sua solicitação. Aguarde alguns instantes e tente novamente. ' + CONTATO_TXT
 };
 
@@ -101,8 +108,21 @@ function hoje_() {
   return Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
 }
 
-/** Lê todas as linhas da aba como objetos (com _row = número da linha na planilha). */
+var RA_ = {};
+function invalidar_(name) { delete RA_[name]; }
+function limparCache_() { RA_ = {}; CFG_CACHE_ = null; }
+
+/**
+ * Lê todas as linhas da aba como objetos (com _row = número da linha na planilha).
+ * Cada aba é lida uma única vez por execução (invalidada a cada gravação) e devolvida em cópias,
+ * o que reduz muito o tempo em que o lock fica preso quando muita gente usa ao mesmo tempo.
+ */
 function readAll_(name) {
+  if (!RA_[name]) RA_[name] = lerAba_(name);
+  return RA_[name].map(function (r) { return Object.assign({}, r); });
+}
+
+function lerAba_(name) {
   var values = sheet_(name).getDataRange().getValues();
   var headers = values[0] || HEADERS[name];
   var rows = [];
@@ -125,6 +145,7 @@ function appendObj_(name, obj) {
     return obj[h] === undefined || obj[h] === null ? '' : obj[h];
   });
   sheet_(name).appendRow(row);
+  invalidar_(name);
 }
 
 /** Atualiza colunas de uma linha. */
@@ -136,6 +157,7 @@ function updateRow_(name, rowNumber, changes) {
     if (col < 1) throw new Error('Coluna inexistente: ' + k);
     sh.getRange(rowNumber, col).setValue(changes[k]);
   });
+  invalidar_(name);
 }
 
 function nextId_(prefix, name) {
@@ -145,7 +167,11 @@ function nextId_(prefix, name) {
 
 function withLock_(fn) {
   var lock = LockService.getScriptLock();
-  lock.waitLock(25000);
+  try {
+    lock.waitLock(25000);
+  } catch (e) {
+    var busy = new Error('OCUPADO'); busy.code = 'OCUPADO'; throw busy;
+  }
   try {
     return fn();
   } finally {
@@ -161,7 +187,7 @@ function getConfig_() {
   CFG_CACHE_ = cfg;
   return cfg;
 }
-function resetConfigCache_() { CFG_CACHE_ = null; }
+function resetConfigCache_() { limparCache_(); }
 
 function log_(evento, duracaoMs, detalhe) {
   try {
@@ -214,10 +240,13 @@ function onOpen() {
     .addSeparator()
     .addItem('Reenviar e-mails pendentes agora', 'menuReprocessar')
     .addItem('Recalcular vagas e fila de espera', 'menuRecalcular')
+    .addItem('Atualizar painel e base de análise', 'menuPainel')
     .addItem('Recalcular permanência e certificados', 'menuPermanencia')
+    .addItem('Criar cópia de segurança agora', 'menuBackup')
     .addSeparator()
     .addItem('Editar inscrito (linha selecionada em Inscritos)', 'menuInfoEditar')
     .addItem('Cancelar inscrição no evento (linha selecionada)', 'menuCancelarInscrito')
+    .addItem('Reativar inscrição no evento (linha selecionada)', 'menuReativarInscrito')
     .addItem('Cancelar vaga em atividade (linha selecionada em Inscricoes_Atividades)', 'menuCancelarVaga')
     .addItem('Inscrever alguém em atividade…', 'menuInscreverManual')
     .addItem('Reenviar QR do inscrito (linha selecionada)', 'menuReenviarQr')
@@ -264,7 +293,9 @@ function installTriggers_() {
   ScriptApp.getProjectTriggers().forEach(function (t) {
     if (t.getHandlerFunction() === 'tick') ScriptApp.deleteTrigger(t);
   });
+  ScriptApp.getProjectTriggers().forEach(function (t) { if (t.getHandlerFunction() === 'backupDiario') ScriptApp.deleteTrigger(t); });
   ScriptApp.newTrigger('tick').timeBased().everyMinutes(10).create();
+  ScriptApp.newTrigger('backupDiario').timeBased().everyDays(1).atHour(23).create();
 }
 
 /** Executado pelo gatilho a cada 10 minutos. */
@@ -274,18 +305,70 @@ function tick() {
   try { checkMinimos_(); } catch (e) { log_('erro_tick_minimos', 0, String(e)); }
   try { processOutbox_(40); } catch (e) { log_('erro_tick_outbox', 0, String(e)); }
   try { sendAlertDigest_(); } catch (e) { log_('erro_tick_digest', 0, String(e)); }
+  try {
+    var props = PropertiesService.getScriptProperties();
+    if (Date.now() - Number(props.getProperty('ULTIMO_PAINEL') || 0) > 30 * 60000) { atualizarPainel_(); props.setProperty('ULTIMO_PAINEL', String(Date.now())); }
+  } catch (e) { log_('erro_tick_painel', 0, String(e)); }
 }
 
-/** Edição direta na aba Atividades (vagas, abertura): atualiza contagens e promove a fila na hora. */
+function toast_(msg) { try { ss_().toast(msg, 'Semana de Eng. Produção', 8); } catch (e) { /* sem interface */ } }
+var EMAIL_RE_ = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+/**
+ * Edição direta na planilha.
+ * - Atividades: vagas/abertura atualizam contagens e promovem a fila na hora.
+ * - Inscritos: valida matrícula única, e-mail e status; e-mail corrigido reenvia o QR.
+ */
 function onEdit(e) {
   try {
-    var sh = e.range.getSheet();
-    if (sh.getName() !== SHEETS.ATIV) return;
-    var col = e.range.getColumn();
-    if (col < 7 || col > 10) return;
-    resetConfigCache_();
-    promoteAll_();
+    var sh = e.range.getSheet(), nome = sh.getName(), col = e.range.getColumn();
+    if (nome === SHEETS.ATIV) {
+      if (col < 7 || col > 10) return;
+      resetConfigCache_();
+      promoteAll_();
+    } else if (nome === SHEETS.INSC) {
+      validarEdicaoInscrito_(e);
+    }
   } catch (err) { /* a edição nunca deve falhar por causa disto */ }
+}
+
+function validarEdicaoInscrito_(e) {
+  var r = e.range, row = r.getRow(), col = r.getColumn();
+  if (row < 2 || r.getNumRows() !== 1 || r.getNumColumns() !== 1) return;
+  var campo = HEADERS[SHEETS.INSC][col - 1];
+  var antigo = e.oldValue === undefined ? '' : e.oldValue;
+  var novo = String(e.value === undefined ? r.getValue() : e.value).trim();
+  var id = sheet_(SHEETS.INSC).getRange(row, 1).getValue();
+  function reverter(msg) { r.setValue(antigo); toast_(msg); }
+  limparCache_();
+  if (campo === 'id' || campo === 'token') { reverter('Esta coluna não pode ser alterada: ela identifica a inscrição e o QR Code.'); return; }
+  if (campo === 'email') {
+    var em = normEmail_(novo);
+    if (!EMAIL_RE_.test(em)) { reverter('E-mail inválido. O valor anterior foi restaurado.'); return; }
+    r.setValue(em);
+    if (em !== normEmail_(antigo)) {
+      updateRow_(SHEETS.INSC, row, { status_email: 'PENDENTE' });
+      var ativo = readAll_(SHEETS.INSC).filter(function (x) { return x._row === row && x.status === 'ATIVA'; }).length;
+      if (ativo) enqueueEmail_(id, 'CONFIRMACAO');
+      toast_('E-mail atualizado. O QR Code será reenviado ao novo endereço em até 10 minutos.');
+    }
+  } else if (campo === 'matricula') {
+    var m = normMatricula_(novo);
+    if (!/^[A-Z0-9.\-]{4,20}$/.test(m)) { reverter('Matrícula inválida. O valor anterior foi restaurado.'); return; }
+    var dup = readAll_(SHEETS.INSC).some(function (x) { return x._row !== row && normMatricula_(x.matricula) === m; });
+    if (dup) { reverter('Já existe outro inscrito com esta matrícula. O valor anterior foi restaurado.'); return; }
+    r.setValue(m);
+  } else if (campo === 'status') {
+    var st = novo.toUpperCase();
+    if (st !== 'ATIVA' && st !== 'CANCELADA') { reverter('Status inválido. Use ATIVA ou CANCELADA.'); return; }
+    r.setValue(st);
+    if (st === 'CANCELADA' && String(antigo).toUpperCase() === 'ATIVA') {
+      cancelarInscrito_(id);
+      toast_('Inscrição cancelada: vagas liberadas e fila de espera atualizada.');
+    }
+  } else if (campo === 'nome' || campo === 'curso' || campo === 'periodo') {
+    r.setValue(normNome_(novo));
+  }
 }
 
 // ===== Inscricao =====
@@ -347,6 +430,9 @@ function register_(p) {
   if (String(cfg.INSCRICOES).toUpperCase() !== 'ABERTAS') {
     return { ok: false, code: 'FECHADAS', mensagem: MSG.fechadas };
   }
+  // Proteção contra envio automático (robôs): campo-isca preenchido ou formulário enviado rápido demais.
+  if (String(p.campo_extra || '').trim()) { log_('inscricao_bloqueada', 0, 'campo-isca'); return { ok: false, code: 'RAPIDO', mensagem: MSG.rapido }; }
+  if (p.tempoMs !== undefined && Number(p.tempoMs) < 2000) { log_('inscricao_bloqueada', 0, 'rápido demais'); return { ok: false, code: 'RAPIDO', mensagem: MSG.rapido }; }
   var d = {
     nome: normNome_(p.nome), curso: normNome_(p.curso), periodo: normNome_(p.periodo),
     matricula: normMatricula_(p.matricula), email: normEmail_(p.email)
@@ -365,7 +451,7 @@ function register_(p) {
       });
       if (!recente) enqueueEmail_(existente.id, 'CONFIRMACAO');
       return {
-        ok: true, status: 'JA_INSCRITO',
+        ok: true, status: 'JA_INSCRITO', inscritoId: existente.id,
         mensagem: MSG.jaInscrito.replace('%EMAIL%', maskEmail_(existente.email))
       };
     }
@@ -376,11 +462,11 @@ function register_(p) {
       email: d.email, data_hora: now_(), status: 'ATIVA', status_email: 'PENDENTE'
     });
     enqueueEmail_(id, 'CONFIRMACAO');
-    return { ok: true, status: 'CRIADA', token: token, nome: d.nome, mensagem: MSG.sucesso };
+    return { ok: true, status: 'CRIADA', token: token, nome: d.nome, inscritoId: id, mensagem: MSG.sucesso };
   });
 
   if (res.ok) {
-    try { processOutbox_(3); } catch (e) { log_('erro_envio_imediato', 0, String(e)); }
+    try { processOutbox_(2, res.inscritoId); } catch (e) { log_('erro_envio_imediato', 0, String(e)); }
     log_('inscricao_' + res.status, Date.now() - t0, '');
   }
   return res;
@@ -583,7 +669,7 @@ function enroll_(p) {
     return r;
   });
   if (res.ok) {
-    try { processOutbox_(3); } catch (e) { log_('erro_envio_imediato', 0, String(e)); }
+    try { processOutbox_(2, insc.id); } catch (e) { log_('erro_envio_imediato', 0, String(e)); }
   }
   return res;
 }
@@ -661,6 +747,7 @@ function atualizarContagens_() {
     var max = vagasMax_(a), oc = conf[a.id] || 0;
     sh.getRange(a._row, 11, 1, 3).setValues([[oc, max === null ? 'sem limite' : Math.max(0, max - oc), fila[a.id] || 0]]);
   });
+  invalidar_(SHEETS.ATIV);
 }
 function atualizarContagensSeguro_() { try { atualizarContagens_(); } catch (e) { log_('erro_contagens', 0, String(e)); } }
 
@@ -787,8 +874,10 @@ function ehErroDeCota_(msg) {
 }
 
 /** Envia e-mails pendentes (confirmação > promoção > fila > atividade). */
-function processOutbox_(max) {
-  var pend = readAll_(SHEETS.OUTBOX).filter(function (o) { return o.status === 'PENDENTE'; });
+function processOutbox_(max, soInscrito) {
+  var pend = readAll_(SHEETS.OUTBOX).filter(function (o) {
+    return o.status === 'PENDENTE' && (!soInscrito || String(o.inscrito_id) === String(soInscrito));
+  });
   pend.sort(function (a, b) {
     var d = (PRIORIDADE_EMAIL[a.tipo] || 9) - (PRIORIDADE_EMAIL[b.tipo] || 9);
     return d !== 0 ? d : a._row - b._row;
@@ -1003,24 +1092,10 @@ function scanLote_(p) {
 
 /** Soma pares ENTRADA→SAÍDA por pessoa/dia e gera Certificados. */
 function recalcularPermanencia_() {
-  var linhas = readAll_(SHEETS.PORTARIA).filter(function (r) { return r.status !== 'ANULADO'; });
-  linhas.sort(function (a, b) { return Number(a.ts) - Number(b.ts); });
-  var grupos = {};
-  linhas.forEach(function (r) {
-    var k = r.inscrito_id + '|' + dia_(r.dia);
-    var g = grupos[k] = grupos[k] || { insc: r.inscrito_id, dia: dia_(r.dia), aberto: null, min: 0, pend: false };
-    if (r.tipo === 'ENTRADA') {
-      if (g.aberto !== null) g.pend = true;
-      g.aberto = Number(r.ts);
-    } else if (g.aberto !== null) {
-      g.min += (Number(r.ts) - g.aberto) / 60000;
-      g.aberto = null;
-    }
-  });
+  var grupos = calcularPermanencia_();
   var perm = [], total = {}, pendPessoa = {}, pendentes = 0;
   Object.keys(grupos).sort().forEach(function (k) {
     var g = grupos[k];
-    if (g.aberto !== null) g.pend = true;
     var m = Math.round(g.min * 10) / 10;
     perm.push([g.insc, g.dia, m, g.pend ? 'SIM' : 'NAO']);
     total[g.insc] = (total[g.insc] || 0) + g.min;
@@ -1040,6 +1115,125 @@ function substituirLinhas_(nome, matriz) {
   var ultima = sh.getLastRow();
   if (ultima > 1) sh.getRange(2, 1, ultima - 1, cols).clearContent();
   if (matriz.length) sh.getRange(2, 1, matriz.length, cols).setValues(matriz);
+  invalidar_(nome);
+}
+
+// ===== Painel =====
+/** Painel do organizador e base plana para análise de dados (tabela dinâmica, Looker Studio, BigQuery, Excel). */
+
+function mediaNum_(lista) {
+  var v = lista.map(Number).filter(function (n) { return !isNaN(n) && n !== 0; });
+  if (!v.length) return '';
+  return Math.round(v.reduce(function (a, b) { return a + b; }, 0) / v.length);
+}
+
+/** Permanência por pessoa/dia a partir da Portaria (pares ENTRADA→SAÍDA). */
+function calcularPermanencia_() {
+  var linhas = readAll_(SHEETS.PORTARIA).filter(function (r) { return r.status !== 'ANULADO'; });
+  linhas.sort(function (a, b) { return Number(a.ts) - Number(b.ts); });
+  var grupos = {};
+  linhas.forEach(function (r) {
+    var k = r.inscrito_id + '|' + dia_(r.dia);
+    var g = grupos[k] = grupos[k] || { insc: r.inscrito_id, dia: dia_(r.dia), aberto: null, min: 0, pend: false };
+    if (r.tipo === 'ENTRADA') {
+      if (g.aberto !== null) g.pend = true;
+      g.aberto = Number(r.ts);
+    } else if (g.aberto !== null) {
+      g.min += (Number(r.ts) - g.aberto) / 60000;
+      g.aberto = null;
+    }
+  });
+  Object.keys(grupos).forEach(function (k) { if (grupos[k].aberto !== null) grupos[k].pend = true; });
+  return grupos;
+}
+
+function contar_(lista, chave) {
+  var m = {};
+  lista.forEach(function (x) { var k = chave(x) || '(não informado)'; m[k] = (m[k] || 0) + 1; });
+  return Object.keys(m).sort(function (a, b) { return m[b] - m[a] || (a < b ? -1 : 1); }).map(function (k) { return [k, m[k]]; });
+}
+
+function atualizarBase_() {
+  var insc = readAll_(SHEETS.INSC), ia = readAll_(SHEETS.IA), pres = readAll_(SHEETS.PRES).filter(function (r) { return r.status !== 'ANULADO'; });
+  var grupos = calcularPermanencia_();
+  var linhas = insc.map(function (i) {
+    var conf = 0, fila = 0, presencas = 0, dias = 0, min = 0, pend = false;
+    ia.forEach(function (r) { if (String(r.inscrito_id) === String(i.id)) { if (r.status === 'CONFIRMADA') conf++; else if (r.status === 'FILA') fila++; } });
+    pres.forEach(function (r) { if (String(r.inscrito_id) === String(i.id)) presencas++; });
+    Object.keys(grupos).forEach(function (k) {
+      var g = grupos[k]; if (String(g.insc) !== String(i.id)) return;
+      dias++; min += g.min; if (g.pend) pend = true;
+    });
+    min = Math.round(min * 10) / 10;
+    return [i.id, i.nome, i.curso, i.periodo, i.matricula, i.email, i.data_hora, i.status, i.status_email,
+      conf, fila, presencas, dias, min, Math.round(min / 60 * 100) / 100, pend ? 'SIM' : 'NAO'];
+  });
+  substituirLinhas_(SHEETS.BASE, linhas);
+}
+
+function atualizarPainel_() {
+  var ss = ss_();
+  var sh = ss.getSheetByName(SHEETS.PAINEL) || ss.insertSheet(SHEETS.PAINEL);
+  var insc = readAll_(SHEETS.INSC), ativas = insc.filter(function (i) { return i.status === 'ATIVA'; });
+  var ia = readAll_(SHEETS.IA), pres = readAll_(SHEETS.PRES).filter(function (r) { return r.status !== 'ANULADO'; });
+  var port = readAll_(SHEETS.PORTARIA).filter(function (r) { return r.status !== 'ANULADO'; });
+  var outbox = readAll_(SHEETS.OUTBOX), grupos = calcularPermanencia_();
+  var blocos = [];
+  blocos.push(['RESUMO', [
+    ['Atualizado em', now_()],
+    ['Inscritos ativos', ativas.length], ['Inscrições canceladas', insc.length - ativas.length],
+    ['E-mails de confirmação enviados', ativas.filter(function (i) { return i.status_email === 'ENVIADO'; }).length],
+    ['E-mails pendentes (todos os tipos)', outbox.filter(function (o) { return o.status === 'PENDENTE'; }).length],
+    ['E-mails com erro definitivo', outbox.filter(function (o) { return o.status === 'ERRO'; }).length],
+    ['Tempo médio de envio do e-mail (ms)', mediaNum_(insc.map(function (i) { return i.tempo_envio_ms; }))],
+    ['Tempo médio de leitura no scanner, no aparelho (ms)', mediaNum_(port.concat(pres).map(function (r) { return r.local_ms; }))],
+    ['Tempo médio de gravação no servidor (ms)', mediaNum_(port.concat(pres).map(function (r) { return r.server_ms; }))],
+    ['Leituras na portaria', port.length], ['Presenças em atividades', pres.length]
+  ]]);
+  blocos.push(['INSCRITOS POR CURSO', contar_(ativas, function (i) { return i.curso; })]);
+  blocos.push(['INSCRITOS POR PERÍODO', contar_(ativas, function (i) { return i.periodo; })]);
+  var porDia = {};
+  Object.keys(grupos).forEach(function (k) { var g = grupos[k]; (porDia[g.dia] = porDia[g.dia] || []).push(g); });
+  blocos.push(['PRESENÇA NA PORTARIA POR DIA (pessoas, permanência média em min, saídas pendentes)', Object.keys(porDia).sort().map(function (d) {
+    var l = porDia[d];
+    return [d, l.length, Math.round(l.reduce(function (a, g) { return a + g.min; }, 0) / l.length), l.filter(function (g) { return g.pend; }).length];
+  })]);
+  var ativ = readAll_(SHEETS.ATIV).filter(function (a) { return String(a.exige_inscricao).toUpperCase() === 'SIM'; });
+  blocos.push(['ATIVIDADES COM INSCRIÇÃO (vagas, confirmados, fila, presentes, comparecimento)', ativ.map(function (a) {
+    var conf = ia.filter(function (r) { return String(r.atividade_id) === String(a.id) && r.status === 'CONFIRMADA'; }).length;
+    var fila = ia.filter(function (r) { return String(r.atividade_id) === String(a.id) && r.status === 'FILA'; }).length;
+    var pr = pres.filter(function (r) { return String(r.atividade_id) === String(a.id); }).length;
+    return [a.id + ' — ' + a.titulo, a.vagas_max === '' ? 'sem limite' : a.vagas_max, conf, fila, pr, conf ? Math.round(pr / conf * 100) + '%' : ''];
+  })]);
+
+  sh.clear();
+  var linha = 1;
+  blocos.forEach(function (b) {
+    sh.getRange(linha, 1).setValue(b[0]).setFontWeight('bold').setBackground('#0F1B2D').setFontColor('#FFFFFF');
+    linha++;
+    if (b[1].length) {
+      var larg = Math.max.apply(null, b[1].map(function (r) { return r.length; }));
+      var m = b[1].map(function (r) { var c = r.slice(); while (c.length < larg) c.push(''); return c; });
+      sh.getRange(linha, 1, m.length, larg).setValues(m);
+      linha += m.length;
+    }
+    linha++;
+  });
+  invalidar_(SHEETS.PAINEL);
+  atualizarBase_();
+  return { inscritos: ativas.length };
+}
+
+/** Cópia de segurança da planilha inteira no Drive do organizador. */
+function criarBackup_() {
+  var nome = 'Backup Semana Eng. Produção ' + now_();
+  var copia = ss_().copy(nome);
+  log_('backup', 0, copia.getUrl());
+  return copia.getUrl();
+}
+
+function backupDiario() {
+  try { criarBackup_(); } catch (e) { alert_('BACKUP_FALHOU', hoje_(), 'A cópia de segurança automática falhou: ' + e + '. Use o menu "Criar cópia de segurança agora".'); }
 }
 
 // ===== Api =====
@@ -1062,21 +1256,26 @@ function handle_(p) {
   }
 }
 
+function handleSeguro_(p) {
+  try { return handle_(p); }
+  catch (err) {
+    if (err && err.code === 'OCUPADO') return { ok: false, code: 'OCUPADO', mensagem: MSG.ocupado };
+    log_('erro_api', 0, String(err && err.stack ? err.stack : err));
+    return { ok: false, code: 'ERRO', mensagem: MSG.erroInterno };
+  }
+}
+
 function doGet(e) {
   var p = (e && e.parameter) || {};
   if (!p.action) p.action = 'config';
-  try { return json_(handle_(p)); }
-  catch (err) { log_('erro_api', 0, String(err)); return json_({ ok: false, mensagem: MSG.erroInterno }); }
+  return json_(handleSeguro_(p));
 }
 
 function doPost(e) {
-  try {
-    var p = JSON.parse(e.postData.contents);
-    return json_(handle_(p));
-  } catch (err) {
-    log_('erro_api', 0, String(err));
-    return json_({ ok: false, mensagem: MSG.erroInterno });
-  }
+  var p;
+  try { p = JSON.parse(e.postData.contents); }
+  catch (err) { return json_({ ok: false, code: 'ERRO', mensagem: MSG.erroInterno }); }
+  return json_(handleSeguro_(p));
 }
 
 // ===== Admin =====
@@ -1167,6 +1366,30 @@ function menuInscreverManual() {
 function menuPermanencia() {
   var r = recalcularPermanencia_();
   alerta_('Permanência', 'Calculado para ' + r.pessoas + ' pessoa(s). Veja as abas Permanencia e Certificados. Saídas pendentes: ' + r.pendentes + '.');
+}
+
+function menuPainel() {
+  var r = atualizarPainel_();
+  alerta_('Painel atualizado', 'Veja as abas Painel (resumo) e Base_Analise (uma linha por inscrito, pronta para tabela dinâmica). Inscritos ativos: ' + r.inscritos + '.');
+}
+
+function menuBackup() {
+  try {
+    var url = criarBackup_();
+    alerta_('Cópia de segurança criada', 'A cópia foi salva no seu Google Drive:\n' + url);
+  } catch (e) {
+    alerta_('Não foi possível criar a cópia', 'Use Arquivo > Fazer uma cópia na planilha. Detalhe técnico: ' + e);
+  }
+}
+
+function menuReativarInscrito() {
+  var row = linhaSelecionada_(SHEETS.INSC); if (!row) return;
+  var insc = inscritoDaLinha_(row); if (!insc) return;
+  if (insc.status === 'ATIVA') { alerta_('Reativar', 'Esta inscrição já está ativa.'); return; }
+  var r = ui_().alert('Reativar inscrição', 'Reativar a inscrição de ' + insc.nome + ' no evento? As vagas em atividades NÃO são restauradas: a pessoa deverá escolher novamente ou você poderá inscrevê-la manualmente.', ui_().ButtonSet.YES_NO);
+  if (r !== ui_().Button.YES) return;
+  updateRow_(SHEETS.INSC, insc._row, { status: 'ATIVA' });
+  alerta_('Reativar', 'Inscrição reativada.');
 }
 
 // ===== Qrcode =====

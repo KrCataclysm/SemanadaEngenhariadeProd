@@ -36,7 +36,7 @@ const telas = [
   ['404', B + '/404.html', null],
   ['inscricao', B + '/inscricao/index.html', '#formCard:not(.oculto)'],
   ['inscricao-fechada', B + '/inscricao/index.html', async pg => { aberto = false; await pg.reload(); await pg.waitForSelector('#fechado:not(.oculto)'); aberto = true; }],
-  ['inscricao-sucesso', B + '/inscricao/index.html', async pg => { await pg.waitForSelector('#formCard:not(.oculto)'); await pg.fill('#nome', 'Joao da Silva Souza'); await pg.selectOption('#periodo', '3º'); await pg.fill('#matricula', '2025' + String(++seq).padStart(4, '0')); await pg.fill('#email', 'j' + seq + '@exemplo.com'); await pg.click('#enviar'); await pg.waitForSelector('#sucesso:not(.oculto)'); }],
+  ['inscricao-sucesso', B + '/inscricao/index.html', async pg => { await pg.waitForSelector('#formCard:not(.oculto)'); await pg.fill('#nome', 'Joao da Silva Souza'); await pg.selectOption('#periodo', '3º'); await pg.fill('#matricula', '2025' + String(++seq).padStart(4, '0')); await pg.fill('#email', 'j' + seq + '@exemplo.com'); await pg.fill('#email2', 'j' + seq + '@exemplo.com'); await pg.waitForTimeout(2100); await pg.click('#enviar'); await pg.waitForSelector('#sucesso:not(.oculto)'); }],
   ['atividades', B + '/inscricao/atividades.html?t=' + R.token, '.ativ'],
   ['scanner-login', B + '/scanner/index.html', '#login'],
   ['scanner-modo', B + '/scanner/index.html', loginScanner],

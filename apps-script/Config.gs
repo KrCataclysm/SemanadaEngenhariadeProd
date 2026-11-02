@@ -14,7 +14,9 @@ var SHEETS = {
   PORTARIA: 'Portaria',
   PRES: 'Presenca_Atividades',
   PERM: 'Permanencia',
-  CERT: 'Certificados'
+  CERT: 'Certificados',
+  PAINEL: 'Painel',
+  BASE: 'Base_Analise'
 };
 
 var HEADERS = {};
@@ -32,6 +34,8 @@ HEADERS[SHEETS.PORTARIA] = ['inscrito_id', 'dia', 'tipo', 'data_hora', 'operador
 HEADERS[SHEETS.PRES] = ['inscrito_id', 'atividade_id', 'data_hora', 'operador', 'status', 'client_id', 'ts', 'local_ms', 'server_ms'];
 HEADERS[SHEETS.PERM] = ['inscrito_id', 'dia', 'minutos', 'saida_pendente'];
 HEADERS[SHEETS.CERT] = ['inscrito_id', 'horas', 'observacao'];
+HEADERS[SHEETS.BASE] = ['inscrito_id', 'nome', 'curso', 'periodo', 'matricula', 'email', 'data_inscricao', 'status', 'status_email',
+  'atividades_confirmadas', 'atividades_em_fila', 'presencas_em_atividades', 'dias_presentes', 'minutos_permanencia', 'horas', 'saida_pendente'];
 
 /** Colunas que precisam ficar como texto (evita converter "0123" ou tokens em número). */
 var TEXT_COLUMNS = {};
@@ -45,6 +49,7 @@ TEXT_COLUMNS[SHEETS.PORTARIA] = ['inscrito_id', 'dia', 'data_hora', 'client_id']
 TEXT_COLUMNS[SHEETS.PRES] = ['inscrito_id', 'atividade_id', 'data_hora', 'client_id'];
 TEXT_COLUMNS[SHEETS.PERM] = ['inscrito_id', 'dia'];
 TEXT_COLUMNS[SHEETS.CERT] = ['inscrito_id'];
+TEXT_COLUMNS[SHEETS.BASE] = ['inscrito_id', 'matricula', 'data_inscricao'];
 
 var DEFAULT_CONFIG = [
   ['INSCRICOES', 'FECHADAS', 'ABERTAS ou FECHADAS: controla a inscrição no evento.'],
@@ -70,6 +75,8 @@ var MSG = {
   jaNaAtividade: 'Você já está inscrito, ou na fila de espera, desta atividade.',
   conflito: 'Não foi possível inscrever você nesta atividade, pois ela ocorre no mesmo dia e em horário que coincide com outra atividade na qual você já está inscrito: %TITULO% (%HORARIO%).',
   atividadeInexistente: 'A atividade informada não foi encontrada.',
+  ocupado: 'O sistema está recebendo muitas solicitações neste momento. Aguarde alguns instantes e tente novamente. ' + CONTATO_TXT,
+  rapido: 'Não foi possível concluir o envio. Aguarde alguns segundos e envie o formulário novamente.',
   erroInterno: 'Ocorreu um erro inesperado ao processar sua solicitação. Aguarde alguns instantes e tente novamente. ' + CONTATO_TXT
 };
 
