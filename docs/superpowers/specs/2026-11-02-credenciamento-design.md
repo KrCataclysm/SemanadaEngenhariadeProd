@@ -37,7 +37,8 @@ Todos os textos (tela, e-mails, erros) em tom formal, frases completas, sem ambi
 
 ## 5. Atividades (fase 2, abertas pelo organizador)
 Visita técnica, minicurso, oficinas e demais atividades com inscrição são abertas **quando o organizador quiser**, marcando "inscrições abertas = SIM" na aba Atividades (cada atividade separadamente).
-- Acesso: página `inscricao/atividades` — a pessoa se identifica com **matrícula + e-mail cadastrados** (⚠ proposta, evita inscrever terceiros só com a matrícula) e escolhe as atividades abertas. Só quem já tem inscrição ATIVA no evento acessa.
+- Acesso (principal): **link pessoal** enviado no e-mail de confirmação e exibido na tela de sucesso (carrega o mesmo código secreto do QR). A pessoa clica em "Escolher atividades", entra já identificada e escolhe entre as atividades abertas. Só quem tem inscrição ATIVA no evento acessa.
+- Acesso (alternativo): o organizador localiza o inscrito pelo nome na planilha e o inscreve manualmente (menu Administração, seção 9), respeitando vagas, conflitos e fila.
 - **Controle de vagas automático**: ocupadas/restantes calculadas pelas inscrições CONFIRMADAS. O organizador pode alterar vagas máximas e mínimas a qualquer momento. Aumentar o máximo promove automaticamente a fila; diminuir abaixo do já ocupado não cancela ninguém (alerta ao organizador). ⚠ "Mínimo" = número mínimo para a atividade acontecer: o organizador recebe alerta quando a atividade está abaixo do mínimo no fechamento.
 - Concorrência tratada com LockService (a última vaga nunca é concedida duas vezes).
 - **Conflito de horário**: a mesma pessoa não pode ter duas atividades CONFIRMADAS ou em FILA cujos horários se sobreponham no mesmo dia (vale para minicurso × visita técnica, os dois turnos de oficina etc.). A tela explica o motivo da recusa.
@@ -46,7 +47,7 @@ Visita técnica, minicurso, oficinas e demais atividades com inscrição são ab
 ## 6. Lista de espera
 - Atividade lotada: a pessoa entra na **FILA**, em ordem de chegada, e é avisada por e-mail e na tela com a **posição**.
 - Quando uma vaga é liberada (inscrição de atividade ou do evento cancelada/inativa, ou aumento do máximo), o primeiro da fila é promovido a CONFIRMADA **automaticamente** e recebe e-mail: saiu da fila de espera e entrou na atividade. Se o promovido tiver conflito de horário no momento, é pulado e permanece na fila (⚠).
-- ⚠ Para poupar a cota de e-mails, mudanças de posição na fila **não** geram e-mail; a posição atual pode ser consultada na página de atividades. Só geram e-mail: entrada na fila e promoção.
+- ⚠ Para poupar a cota de e-mails, mudanças de posição na fila **não** geram e-mail; a posição atual pode ser consultada na página de atividades, pelo link pessoal (alternativa válida). Só geram e-mail: entrada na fila e promoção.
 - A fila é visível ao organizador na planilha.
 
 ## 7. E-mail
@@ -100,7 +101,7 @@ Concorrência na última vaga, duplicidade por matrícula, inscrições fechadas
 
 Vagas e valores mínimo/máximo: definidos pelo organizador na aba Atividades (sem valor fixo no código).
 
-## 16. Pendências para o OK final
-1. ⚠ Identificação na inscrição em atividades por matrícula + e-mail.
-2. ⚠ "Vagas mínimas" = mínimo para a atividade acontecer (só gera alerta).
-3. ⚠ E-mail de fila só na entrada e na promoção (posição atual consultável na página).
+## 16. Decisões confirmadas na revisão
+1. Acesso às atividades: link pessoal (principal) + inscrição manual pelo organizador (alternativa).
+2. "Vagas mínimas" = mínimo para a atividade acontecer (só gera alerta).
+3. E-mail de fila só na entrada e na promoção; posição atual consultável na página.
