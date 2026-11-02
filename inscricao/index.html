@@ -17,8 +17,13 @@
   <img class="caepro" src="../assets/logo-caepro.png" alt="CAEPRO">
 </div></header>
 <main>
-  <div id="fechado" class="aviso oculto"></div>
-  <section id="formCard" class="card">
+  <section id="carregando" class="card"><p>Verificando se as inscrições estão abertas…</p></section>
+  <section id="fechado" class="card oculto">
+    <h1>Inscrições não disponíveis</h1>
+    <div id="msgFechado" class="aviso erro"></div>
+    <p><button type="button" class="sec" id="btnRecarregar">Verificar novamente</button></p>
+  </section>
+  <section id="formCard" class="card oculto">
     <h1>Inscrição no evento</h1>
     <p>Preencha os dados abaixo. Após a inscrição, você receberá um QR Code pessoal, que deverá ser apresentado na entrada e na saída em cada dia do evento. A inscrição nas atividades (oficinas, minicurso, visita técnica e outras) será aberta posteriormente, e você será informado.</p>
     <div class="dots"></div>

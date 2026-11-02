@@ -7,14 +7,20 @@
     msg.classList.add('oculto');
   }
 
-  App.api(null).then(function (c) {
-    if (c && c.ok && !c.inscricoesAbertas) {
-      App.aviso($('fechado'), 'erro', c.mensagemFechadas);
-      btn.disabled = true;
-    } else if (c && !c.ok) {
-      App.aviso($('fechado'), 'erro', c.mensagem);
-    }
-  });
+  // O formulário só aparece quando o sistema confirma que as inscrições estão abertas.
+  function verificar() {
+    mostrar('carregando', true); mostrar('fechado', false); mostrar('formCard', false);
+    App.api(null).then(function (c) {
+      mostrar('carregando', false);
+      if (c && c.ok && c.inscricoesAbertas) { mostrar('formCard', true); return; }
+      $('msgFechado').textContent = (c && c.ok) ? c.mensagemFechadas
+        : ((c && c.mensagem) || 'Não foi possível verificar o status das inscrições. Tente novamente em instantes.');
+      mostrar('fechado', true);
+    });
+  }
+  function mostrar(id, sim) { $(id).classList.toggle('oculto', !sim); }
+  $('btnRecarregar').addEventListener('click', verificar);
+  verificar();
 
   form.addEventListener('submit', function (ev) {
     ev.preventDefault();
