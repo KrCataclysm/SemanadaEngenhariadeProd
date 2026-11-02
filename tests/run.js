@@ -502,5 +502,16 @@ test('SITE_URL vazio na planilha: o e-mail mantém o botão (endereço padrão) 
   assert.strictEqual(e.ctx.getConfig_().SITE_URL, 'https://outro.exemplo/site/', 'não sobrescreve valor preenchido');
 });
 
+test('e-mail: QR e logo embutidos, botão "Abrir meu QR Code" com o token e texto de apoio (não depende de imagem externa)', () => {
+  const e = novo(); e.abrir(); const r = e.reg(1); const m = e.sent[0];
+  assert(m.inlineImages.qr.bytes.length > 100 && m.inlineImages.logo.bytes.length > 500, 'imagens embutidas');
+  assert(m.htmlBody.includes('cid:qr') && m.htmlBody.includes('cid:logo'));
+  assert(!/https?:\/\/[^"]*logo-caepro\.png/.test(m.htmlBody), 'sem logo externo');
+  assert(m.htmlBody.includes('/inscricao/qr.html?t=' + r.token) && m.htmlBody.includes('Abrir meu QR Code'));
+  assert(m.htmlBody.includes('Se a imagem do QR Code não aparecer'));
+  assert(m.body.includes('Abrir meu QR Code: https://') && m.body.includes('/inscricao/qr.html?t=' + r.token));
+  assert(m.inlineImages.logo.type === 'image/png');
+});
+
 console.log(`\n${passed} ok, ${failed} falharam`);
 process.exit(failed ? 1 : 0);

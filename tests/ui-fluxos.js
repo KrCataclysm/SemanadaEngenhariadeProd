@@ -76,5 +76,11 @@ let ok = 0; const t = async (nome, fn) => { try { await fn(); ok++; console.log(
     await pg.evaluate(() => window.__scanner.processar('0'.repeat(32), { manual: true }));
     await pg.waitForFunction(() => /NÃO RECONHECIDO/.test(document.getElementById('res').textContent), null, { timeout: 8000 }); await c.close();
   });
+  await t('página do QR (botão do e-mail): mostra o QR do token, permite baixar e recusa link inválido', async () => {
+    const [c, pg] = await novo(); await pg.goto(B + '/inscricao/qr.html?t=' + base.token); await pg.waitForSelector('#ok:not(.oculto)');
+    assert(/^data:image\/gif/.test(await pg.getAttribute('#qrImg', 'src'))); assert(/^data:image\/gif/.test(await pg.getAttribute('#qrBaixar', 'href')));
+    assert(/atividades\.html\?t=[a-f0-9]{32}$/.test(await pg.getAttribute('#btnAtividades', 'href')));
+    await pg.goto(B + '/inscricao/qr.html?t=lixo'); await pg.waitForSelector('#invalido:not(.oculto)'); assert(!(await pg.isVisible('#ok'))); await c.close();
+  });
   await br.close(); srv.close(); console.log(`\n${ok} fluxo(s) ok`);
 })();

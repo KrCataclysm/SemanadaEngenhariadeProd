@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://script.google.com https://*.googleusercontent.com; base-uri 'self'; form-action 'self'; object-src 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#0F1B2D">
+<meta name="color-scheme" content="light">
+<meta name="robots" content="noindex, nofollow">
+<title>Meu QR Code — Semana de Engenharia de Produção</title>
+<link rel="icon" href="../assets/logo-evento.svg" type="image/svg+xml">
+<link rel="icon" href="../assets/icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="../assets/icons/apple-touch-icon.png">
+<link rel="preload" href="../assets/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../assets/fonts/sora-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+<a class="skip" href="#conteudo">Ir para o conteúdo</a>
+<header class="topo"><div class="in">
+  <img class="ev" src="../assets/logo-evento.svg" alt="" width="48" height="48">
+  <div><div class="datas">11, 12 E 13 DE NOVEMBRO DE 2026</div><div class="nome">Semana de Engenharia de Produção</div></div>
+  <img class="caepro" src="../assets/logo-caepro.png" alt="CAEPRO — Centro Acadêmico de Engenharia de Produção" width="44" height="44">
+</div></header>
+<noscript><div class="aviso erro">Para exibir o seu QR Code, ative o JavaScript no navegador.</div></noscript>
+<main id="conteudo">
+  <section id="ok" class="card oculto">
+    <h1>Seu QR Code de acesso</h1>
+    <div class="qr">
+      <img id="qrImg" alt="QR Code pessoal de acesso ao evento" width="280" height="280">
+      <p><a id="qrBaixar" class="btn sec" download="qrcode-semana-eng-producao.gif">Baixar QR Code</a></p>
+    </div>
+    <h2>Como usar</h2>
+    <ul>
+      <li>Apresente este QR Code na entrada e na saída em cada dia do evento.</li>
+      <li>Mantenha o brilho do celular no máximo ou leve o QR Code impresso.</li>
+      <li>O QR Code é pessoal e intransferível: não o compartilhe.</li>
+    </ul>
+    <p><a id="btnAtividades" class="btn" href="#">Escolher atividades</a></p>
+    <p class="contato" id="contato"></p>
+  </section>
+  <section id="invalido" class="card oculto">
+    <h1>Link inválido</h1>
+    <div class="aviso erro">Não foi possível exibir o QR Code, porque o link está incompleto ou incorreto. Utilize o link do e-mail de confirmação da sua inscrição. Em caso de dúvidas, entre em contato com a CAEPRO pelo Instagram (@caeproufpi) ou pelo e-mail caepro.ufpi1@gmail.com.</div>
+  </section>
+</main>
+<script src="vendor/qrcode.js"></script>
+<script src="qr.js"></script>
+</body>
+</html>
