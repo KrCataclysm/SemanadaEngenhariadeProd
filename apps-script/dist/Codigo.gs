@@ -26,6 +26,7 @@ function garantirMigracao_() {
     return withLock_(function () {
       if (props.getProperty('VERSAO_APLICADA') === CODIGO_VERSAO) return false;
       setup_();
+      preencherPadroes_();
       try { ensureTriggers_(); } catch (e) { log_('erro_gatilhos', 0, String(e)); }
       props.setProperty('VERSAO_APLICADA', CODIGO_VERSAO);
       log_('migracao', 0, 'versão ' + CODIGO_VERSAO);
@@ -35,6 +36,12 @@ function garantirMigracao_() {
     if (e && e.code === 'OCUPADO') return false;   // outra execução está migrando; tenta de novo na próxima
     throw e;
   }
+}
+
+/** Completa valores essenciais que estejam vazios na aba Config (nunca sobrescreve o que já foi preenchido). */
+function preencherPadroes_() {
+  var linha = readAll_(SHEETS.CONFIG).filter(function (r) { return String(r.chave).trim() === 'SITE_URL'; })[0];
+  if (linha && !String(linha.valor).trim()) { updateRow_(SHEETS.CONFIG, linha._row, { valor: SITE_URL_PADRAO }); resetConfigCache_(); }
 }
 
 // ===== Config =====
@@ -91,13 +98,16 @@ TEXT_COLUMNS[SHEETS.PERM] = ['inscrito_id', 'dia'];
 TEXT_COLUMNS[SHEETS.CERT] = ['inscrito_id'];
 TEXT_COLUMNS[SHEETS.BASE] = ['inscrito_id', 'matricula', 'data_inscricao'];
 
+/** Endereço do site publicado (GitHub Pages). Usado quando SITE_URL está vazio na aba Config. */
+var SITE_URL_PADRAO = 'https://krcataclysm.github.io/SemanadaEngenhariadeProd';
+
 var DEFAULT_CONFIG = [
   ['INSCRICOES', 'FECHADAS', 'ABERTAS ou FECHADAS: controla a inscrição no evento.'],
   ['PIN', '', 'PIN da equipe para o scanner (defina antes do evento).'],
   ['PIN_ADMIN', '', 'Senha do painel de administração (/admin/). Mínimo 8 caracteres e diferente do PIN do scanner.'],
   ['EMAIL_ALERTAS', '', 'E-mail que recebe os alertas (vazio = e-mail da conta dona da planilha).'],
   ['NOME_EVENTO', 'Semana de Engenharia de Produção', 'Nome oficial (assunto e título dos e-mails).'],
-  ['SITE_URL', '', 'Endereço do GitHub Pages, sem barra no final. Ex.: https://usuario.github.io/repositorio'],
+  ['SITE_URL', SITE_URL_PADRAO, 'Endereço do GitHub Pages, sem barra no final. Usado no botão "Escolher atividades" dos e-mails.'],
   ['INSTAGRAM_CAEPRO', 'https://www.instagram.com/caeproufpi', 'Contato da CAEPRO nos textos.'],
   ['EMAIL_CAEPRO', 'caepro.ufpi1@gmail.com', 'Contato da CAEPRO nos textos.']
 ];
@@ -837,7 +847,7 @@ function minhasAtividadesTexto_(inscritoId) {
 function buildEmail_(insc, tipo, atividade) {
   var cfg = getConfig_();
   var evento = cfg.NOME_EVENTO || 'Semana de Engenharia de Produção';
-  var site = (cfg.SITE_URL || '').replace(/\/$/, '');
+  var site = String(cfg.SITE_URL || SITE_URL_PADRAO).replace(/\/$/, '');
   var link = site ? site + '/inscricao/atividades.html?t=' + insc.token : '';
   var assunto, titulo, intro;
   var ia = null;

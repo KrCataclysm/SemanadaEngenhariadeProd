@@ -18,6 +18,7 @@ function garantirMigracao_() {
     return withLock_(function () {
       if (props.getProperty('VERSAO_APLICADA') === CODIGO_VERSAO) return false;
       setup_();
+      preencherPadroes_();
       try { ensureTriggers_(); } catch (e) { log_('erro_gatilhos', 0, String(e)); }
       props.setProperty('VERSAO_APLICADA', CODIGO_VERSAO);
       log_('migracao', 0, 'versão ' + CODIGO_VERSAO);
@@ -27,4 +28,10 @@ function garantirMigracao_() {
     if (e && e.code === 'OCUPADO') return false;   // outra execução está migrando; tenta de novo na próxima
     throw e;
   }
+}
+
+/** Completa valores essenciais que estejam vazios na aba Config (nunca sobrescreve o que já foi preenchido). */
+function preencherPadroes_() {
+  var linha = readAll_(SHEETS.CONFIG).filter(function (r) { return String(r.chave).trim() === 'SITE_URL'; })[0];
+  if (linha && !String(linha.valor).trim()) { updateRow_(SHEETS.CONFIG, linha._row, { valor: SITE_URL_PADRAO }); resetConfigCache_(); }
 }

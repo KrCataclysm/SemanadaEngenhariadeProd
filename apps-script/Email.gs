@@ -35,7 +35,7 @@ function minhasAtividadesTexto_(inscritoId) {
 function buildEmail_(insc, tipo, atividade) {
   var cfg = getConfig_();
   var evento = cfg.NOME_EVENTO || 'Semana de Engenharia de Produção';
-  var site = (cfg.SITE_URL || '').replace(/\/$/, '');
+  var site = String(cfg.SITE_URL || SITE_URL_PADRAO).replace(/\/$/, '');
   var link = site ? site + '/inscricao/atividades.html?t=' + insc.token : '';
   var assunto, titulo, intro;
   var ia = null;
