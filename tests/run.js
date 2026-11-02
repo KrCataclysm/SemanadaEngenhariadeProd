@@ -266,5 +266,70 @@ test('permanência soma pares entrada→saída, sinaliza saída pendente e gera 
   assert.strictEqual(cert.find(x => x.inscrito_id === e.insc(1).id).horas, 3.5); assert.strictEqual(r.pendentes, 1);
 });
 
+console.log('Blindagem');
+test('formulário: campo-isca preenchido e envio rápido demais são barrados', () => {
+  const e = novo(); e.abrir();
+  assert.strictEqual(e.reg(1, { campo_extra: 'http://spam' }).code, 'RAPIDO');
+  assert.strictEqual(e.reg(1, { tempoMs: 300 }).code, 'RAPIDO');
+  assert.strictEqual(e.tabela('Inscritos').length, 0);
+  assert.strictEqual(e.reg(1, { tempoMs: 9000, campo_extra: '' }).ok, true);
+});
+test('sistema ocupado (lock) responde com mensagem clara, sem erro técnico', () => {
+  const e = novo(); e.abrir(); e.state.lockBusy = true;
+  const r = e.ctx.handleSeguro_({ action: 'register', nome: 'Pessoa Teste', curso: 'x', periodo: '1º', matricula: '20240001', email: 'a@b.com' });
+  assert.strictEqual(r.code, 'OCUPADO'); assert(/muitas solicitações/.test(r.mensagem)); assert.strictEqual(e.tabela('Inscritos').length, 0);
+});
+test('cada aba é lida uma vez por execução e o cache respeita as gravações', () => {
+  const e = novo(); e.abrir(); e.reg(1);
+  let leituras = 0; const orig = e.ctx.lerAba_; e.ctx.lerAba_ = n => { leituras++; return orig(n); };
+  e.ctx.limparCache_(); e.ctx.readAll_('Inscritos'); e.ctx.readAll_('Inscritos'); e.ctx.readAll_('Inscritos');
+  assert.strictEqual(leituras, 1);
+  const a = e.ctx.readAll_('Inscritos'); a[0].nome = 'ALTERADO'; assert.notStrictEqual(e.ctx.readAll_('Inscritos')[0].nome, 'ALTERADO', 'cópias isoladas');
+  e.ctx.updateRow_('Inscritos', 2, { nome: 'Novo Nome' }); assert.strictEqual(e.ctx.readAll_('Inscritos')[0].nome, 'Novo Nome');
+});
+function editar(e, aba, linha, col, valor, antigo) {
+  const rng = e.sheets[aba].getRange(linha, col); rng.setValue(valor);
+  e.ctx.onEdit({ range: rng, value: valor, oldValue: antigo });
+  return rng.getValue();
+}
+test('editar e-mail na planilha: valida, normaliza e reenvia o QR; inválido é revertido', () => {
+  const e = novo(); e.abrir(); e.reg(1); e.sent.length = 0;
+  assert.strictEqual(editar(e, 'Inscritos', 2, 7, 'ruim', 'p1@exemplo.com'), 'p1@exemplo.com');
+  assert.strictEqual(editar(e, 'Inscritos', 2, 7, '  Novo@Exemplo.COM ', 'p1@exemplo.com'), 'novo@exemplo.com');
+  assert.strictEqual(e.insc(1).status_email, 'PENDENTE');
+  e.state.quota = 100; e.ctx.tick();
+  assert.strictEqual(e.emailsDe(1).length, 0); assert(e.sent.some(m => m.to === 'novo@exemplo.com'));
+});
+test('editar matrícula na planilha: não permite duplicar nem formato inválido', () => {
+  const e = novo(); e.abrir(); e.reg(1); e.reg(2);
+  assert.strictEqual(editar(e, 'Inscritos', 3, 6, '20240001', '20240002'), '20240002');
+  assert.strictEqual(editar(e, 'Inscritos', 3, 6, '!', '20240002'), '20240002');
+  assert.strictEqual(editar(e, 'Inscritos', 3, 6, ' 2024 0099 ', '20240002'), '20240099');
+});
+test('mudar status para CANCELADA na planilha libera vagas e promove a fila; id e token são protegidos', () => {
+  const e = cenario(); [1, 2, 3].forEach(n => e.enroll(n, 'A16'));
+  editar(e, 'Inscritos', 2, 9, 'cancelada', 'ATIVA');
+  assert.strictEqual(e.insc(1).status, 'CANCELADA'); assert.strictEqual(e.status(3, 'A16'), 'CONFIRMADA');
+  assert.strictEqual(editar(e, 'Inscritos', 3, 2, 'x', e.insc(2).token), e.insc(2).token);
+  assert.strictEqual(editar(e, 'Inscritos', 3, 9, 'QUALQUER', 'ATIVA'), 'ATIVA');
+});
+test('painel e base de análise: totais por curso, atividades, permanência e tempos', () => {
+  const e = scan(); e.ativ('A16', { inscricoes_abertas: 'SIM', vagas_max: 1 }); e.enroll(1, 'A16'); e.enroll(2, 'A16');
+  const h = 3600 * 1000, base = Date.now() - 5 * h;
+  e.lote([e.por(1, { ts: base }), e.por(1, { ts: base + 2 * h })]);
+  e.lote([e.por(1, { modo: 'ATIVIDADE', atividadeId: 'A16' })]);
+  e.ctx.atualizarPainel_();
+  const b = e.tabela('Base_Analise');
+  assert.strictEqual(b.length, 3);
+  const p1 = b.find(x => x.matricula === '20240001');
+  assert.deepStrictEqual([p1.atividades_confirmadas, p1.presencas_em_atividades, p1.dias_presentes, p1.minutos_permanencia, p1.horas], [1, 1, 1, 120, 2]);
+  assert.strictEqual(b.find(x => x.matricula === '20240002').atividades_em_fila, 1);
+  const painel = e.sheets['Painel'].data.map(r => r.join('|')).join('\n');
+  assert(/Inscritos ativos\|3/.test(painel)); assert(/Engenharia de Produção\|3/.test(painel)); assert(/A16 — Visita técnica/.test(painel));
+});
+test('cópia de segurança devolve o endereço da cópia', () => {
+  const e = novo(); assert(/^https:\/\/exemplo\/Backup/.test(e.ctx.criarBackup_()));
+});
+
 console.log(`\n${passed} ok, ${failed} falharam`);
 process.exit(failed ? 1 : 0);

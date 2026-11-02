@@ -118,3 +118,7 @@ button.sec, .btn.sec { background: var(--azul); } button.sec:hover, .btn.sec:hov
   .card { box-shadow: none; border: 0; padding: 0; } .qr { background: #fff; } .link-pessoal { font-size: .7rem; }
 }
 .mini { font-size: 1rem; margin-bottom: .25rem; }
+.isca { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+dialog { border: 0; border-radius: var(--raio); padding: 1.25rem; max-width: min(28rem, calc(100vw - 2rem)); color: var(--grafite); box-shadow: 0 .5rem 2rem rgba(15, 27, 45, .35); }
+dialog::backdrop { background: rgba(15, 27, 45, .6); }
+dialog p { margin-bottom: 1rem; }

@@ -141,6 +141,14 @@
     if (!opcoes.manual && S.recente[token] && agora - S.recente[token] < 3500) return;
     S.recente[token] = agora;
     var insc = S.porToken[token];
+    if (!insc && !opcoes.retry && navigator.onLine !== false) {
+      // Pode ser alguém que se inscreveu depois de a lista ser carregada: atualiza e tenta de novo.
+      resultado('warn', 'ATUALIZANDO A LISTA…', '', 'QR Code não encontrado na lista deste aparelho. Verificando no sistema.');
+      api({ action: 'scan_lista', pin: S.pin }).then(function (l) {
+        if (l.ok) { carregarLista(l); LS.set('scanner_lista', JSON.stringify(l)); }
+      }).catch(function () { /* segue com a lista atual */ }).then(function () { processar(token, { manual: true, retry: true, forcar: opcoes.forcar }); });
+      return;
+    }
     if (!insc) {
       resultado('err', 'QR NÃO RECONHECIDO', '', 'Este QR Code não pertence a uma inscrição. Se o participante se inscreveu agora há pouco, toque em "Trocar modo" e depois em "Iniciar leitura" para atualizar a lista.');
       feedback('err'); return;

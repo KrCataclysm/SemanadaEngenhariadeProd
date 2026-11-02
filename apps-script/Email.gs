@@ -120,8 +120,10 @@ function ehErroDeCota_(msg) {
 }
 
 /** Envia e-mails pendentes (confirmação > promoção > fila > atividade). */
-function processOutbox_(max) {
-  var pend = readAll_(SHEETS.OUTBOX).filter(function (o) { return o.status === 'PENDENTE'; });
+function processOutbox_(max, soInscrito) {
+  var pend = readAll_(SHEETS.OUTBOX).filter(function (o) {
+    return o.status === 'PENDENTE' && (!soInscrito || String(o.inscrito_id) === String(soInscrito));
+  });
   pend.sort(function (a, b) {
     var d = (PRIORIDADE_EMAIL[a.tipo] || 9) - (PRIORIDADE_EMAIL[b.tipo] || 9);
     return d !== 0 ? d : a._row - b._row;

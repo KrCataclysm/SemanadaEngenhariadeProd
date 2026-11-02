@@ -147,24 +147,10 @@ function scanLote_(p) {
 
 /** Soma pares ENTRADA→SAÍDA por pessoa/dia e gera Certificados. */
 function recalcularPermanencia_() {
-  var linhas = readAll_(SHEETS.PORTARIA).filter(function (r) { return r.status !== 'ANULADO'; });
-  linhas.sort(function (a, b) { return Number(a.ts) - Number(b.ts); });
-  var grupos = {};
-  linhas.forEach(function (r) {
-    var k = r.inscrito_id + '|' + dia_(r.dia);
-    var g = grupos[k] = grupos[k] || { insc: r.inscrito_id, dia: dia_(r.dia), aberto: null, min: 0, pend: false };
-    if (r.tipo === 'ENTRADA') {
-      if (g.aberto !== null) g.pend = true;
-      g.aberto = Number(r.ts);
-    } else if (g.aberto !== null) {
-      g.min += (Number(r.ts) - g.aberto) / 60000;
-      g.aberto = null;
-    }
-  });
+  var grupos = calcularPermanencia_();
   var perm = [], total = {}, pendPessoa = {}, pendentes = 0;
   Object.keys(grupos).sort().forEach(function (k) {
     var g = grupos[k];
-    if (g.aberto !== null) g.pend = true;
     var m = Math.round(g.min * 10) / 10;
     perm.push([g.insc, g.dia, m, g.pend ? 'SIM' : 'NAO']);
     total[g.insc] = (total[g.insc] || 0) + g.min;
@@ -184,4 +170,5 @@ function substituirLinhas_(nome, matriz) {
   var ultima = sh.getLastRow();
   if (ultima > 1) sh.getRange(2, 1, ultima - 1, cols).clearContent();
   if (matriz.length) sh.getRange(2, 1, matriz.length, cols).setValues(matriz);
+  invalidar_(nome);
 }

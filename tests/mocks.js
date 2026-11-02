@@ -13,10 +13,10 @@ function makeEnv(opts = {}) {
     setValue(x) { this.sh.set(this.r, this.c, x); return this; }
     getValue() { return this.sh.get(this.r, this.c); }
     setFormula(f) { this.sh.set(this.r, this.c, f); return this; }
-    getRow() { return this.r; }
+    getRow() { return this.r; } getColumn() { return this.c; } getNumRows() { return this.nr; } getNumColumns() { return this.nc; } getSheet() { return this.sh; }
     clearContent() { for (let i = 0; i < this.nr; i++) for (let j = 0; j < this.nc; j++) this.sh.set(this.r + i, this.c + j, ''); return this; }
     setBackground() { return this; } setFontColor() { return this; } setFontWeight() { return this; }
-    setNumberFormat() { return this; } setDataValidation() { return this; }
+    setNumberFormat() { return this; } setFontWeight() { return this; } setDataValidation() { return this; }
   }
   class Sheet {
     constructor(name) { this.name = name; this.data = []; }
@@ -26,18 +26,19 @@ function makeEnv(opts = {}) {
     getDataRange() { const w = Math.max(0, ...this.data.map(x => x.length)); return { getValues: () => this.data.map(r => { const o = r.slice(); while (o.length < w) o.push(''); return o; }) }; }
     appendRow(row) { this.data.push(row.slice()); }
     getLastRow() { return this.data.length; }
-    setFrozenRows() {}
+    setFrozenRows() {} getName() { return this.name; } clear() { this.data = []; }
   }
   const SpreadsheetApp = {
     getActiveSpreadsheet: () => ({
       getSheetByName: n => sheets[n] || null,
-      insertSheet: n => (sheets[n] = new Sheet(n))
+      insertSheet: n => (sheets[n] = new Sheet(n)),
+      toast() {}, copy: n => ({ getUrl: () => 'https://exemplo/' + n })
     }),
     newDataValidation: () => ({ requireValueInList() { return this; }, build() { return {}; } })
   };
   const ctx = {
     SpreadsheetApp, console,
-    LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
+    LockService: { getScriptLock: () => ({ waitLock() { if (state.lockBusy) throw new Error('Lock timeout'); }, releaseLock() {} }) },
     Utilities: {
       getUuid: () => require('crypto').randomUUID(),
       formatDate: (d, tz, f) => { const p = n => String(n).padStart(2, '0'); const x = new Date(d.getTime() + state.clock);
@@ -69,7 +70,7 @@ function makeEnv(opts = {}) {
   })(ctx.MailApp.sendEmail);
   vm.createContext(ctx);
   const dir = path.join(__dirname, '..', 'apps-script');
-  const files = ['Qrcode.gs', 'Config.gs', 'Db.gs', 'Setup.gs', 'Inscricao.gs', 'Atividades.gs', 'Email.gs', 'Scanner.gs', 'Api.gs', 'Admin.gs'];
+  const files = ['Qrcode.gs', 'Config.gs', 'Db.gs', 'Setup.gs', 'Inscricao.gs', 'Atividades.gs', 'Email.gs', 'Scanner.gs', 'Painel.gs', 'Api.gs', 'Admin.gs'];
   vm.runInContext(files.map(f => fs.readFileSync(path.join(dir, f), 'utf8')).join('\n;\n'), ctx, { filename: 'appscript.js' });
   return { ctx, sheets, sent, state, props, run: code => vm.runInContext(code, ctx) };
 }

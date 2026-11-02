@@ -1,6 +1,6 @@
 (function () {
   var $ = function (id) { return document.getElementById(id); };
-  var form = $('form'), msg = $('msg'), btn = $('enviar');
+  var form = $('form'), msg = $('msg'), btn = $('enviar'), carregadoEm = Date.now();
 
   function limparErros() {
     document.querySelectorAll('.erro-campo').forEach(function (e) { e.textContent = ''; });
@@ -35,15 +35,20 @@
       nome: form.nome.value, curso: form.curso.value, periodo: form.periodo.value,
       matricula: form.matricula.value, email: form.email.value
     };
+    dados.campo_extra = form.campo_extra.value; dados.tempoMs = Date.now() - carregadoEm;
     var faltando = false;
-    ['nome', 'curso', 'periodo', 'matricula', 'email'].forEach(function (k) {
-      if (!String(dados[k]).trim()) {
+    ['nome', 'curso', 'periodo', 'matricula', 'email', 'email2'].forEach(function (k) {
+      if (k === 'email2') { dados.email2 = form.email2.value; }
+      if (!String(k === 'email2' ? form.email2.value : dados[k]).trim()) {
         marcarErro(k, 'Preencha este campo.');
         faltando = true;
       }
     });
+    if (!faltando && form.email.value.trim().toLowerCase() !== form.email2.value.trim().toLowerCase()) {
+      marcarErro('email2', 'Os endereços de e-mail não coincidem. Confira e digite novamente.'); faltando = true;
+    }
     if (faltando) {
-      App.aviso(msg, 'erro', 'Preencha todos os campos para concluir a inscrição.');
+      App.aviso(msg, 'erro', 'Revise os campos destacados para concluir a inscrição.');
       var primeiro = form.querySelector('[aria-invalid="true"]'); if (primeiro) primeiro.focus();
       return;
     }

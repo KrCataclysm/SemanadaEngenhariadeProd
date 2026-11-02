@@ -86,3 +86,27 @@ function menuPermanencia() {
   var r = recalcularPermanencia_();
   alerta_('Permanência', 'Calculado para ' + r.pessoas + ' pessoa(s). Veja as abas Permanencia e Certificados. Saídas pendentes: ' + r.pendentes + '.');
 }
+
+function menuPainel() {
+  var r = atualizarPainel_();
+  alerta_('Painel atualizado', 'Veja as abas Painel (resumo) e Base_Analise (uma linha por inscrito, pronta para tabela dinâmica). Inscritos ativos: ' + r.inscritos + '.');
+}
+
+function menuBackup() {
+  try {
+    var url = criarBackup_();
+    alerta_('Cópia de segurança criada', 'A cópia foi salva no seu Google Drive:\n' + url);
+  } catch (e) {
+    alerta_('Não foi possível criar a cópia', 'Use Arquivo > Fazer uma cópia na planilha. Detalhe técnico: ' + e);
+  }
+}
+
+function menuReativarInscrito() {
+  var row = linhaSelecionada_(SHEETS.INSC); if (!row) return;
+  var insc = inscritoDaLinha_(row); if (!insc) return;
+  if (insc.status === 'ATIVA') { alerta_('Reativar', 'Esta inscrição já está ativa.'); return; }
+  var r = ui_().alert('Reativar inscrição', 'Reativar a inscrição de ' + insc.nome + ' no evento? As vagas em atividades NÃO são restauradas: a pessoa deverá escolher novamente ou você poderá inscrevê-la manualmente.', ui_().ButtonSet.YES_NO);
+  if (r !== ui_().Button.YES) return;
+  updateRow_(SHEETS.INSC, insc._row, { status: 'ATIVA' });
+  alerta_('Reativar', 'Inscrição reativada.');
+}

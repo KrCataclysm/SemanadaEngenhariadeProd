@@ -6,10 +6,22 @@
   function api(payload) {
     var url = (window.APP_CONFIG || {}).API_URL;
     if (!url) return Promise.resolve({ ok: false, mensagem: MSG_NAO_CONFIG });
-    var req = payload
-      ? fetch(url, { method: 'POST', body: JSON.stringify(payload) })
-      : fetch(url + '?action=config');
-    return req.then(function (r) { return r.json(); }).catch(function () { return { ok: false, mensagem: MSG_REDE }; });
+    function uma() {
+      var req = payload
+        ? fetch(url, { method: 'POST', body: JSON.stringify(payload) })
+        : fetch(url + '?action=config');
+      return req.then(function (r) { return r.json(); }).catch(function () { return { ok: false, code: 'REDE', mensagem: MSG_REDE }; });
+    }
+    // Quando muita gente usa ao mesmo tempo, o sistema responde "ocupado": tentamos de novo sozinhos (as operações são idempotentes).
+    function tentar(n) {
+      return uma().then(function (r) {
+        if ((r.code === 'OCUPADO' || r.code === 'REDE') && n < 3) {
+          return new Promise(function (ok) { setTimeout(ok, 1500 * (n + 1) + Math.random() * 1000); }).then(function () { return tentar(n + 1); });
+        }
+        return r;
+      });
+    }
+    return tentar(0);
   }
 
   function aviso(el, tipo, texto) {

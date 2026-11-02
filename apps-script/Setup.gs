@@ -31,10 +31,13 @@ function onOpen() {
     .addSeparator()
     .addItem('Reenviar e-mails pendentes agora', 'menuReprocessar')
     .addItem('Recalcular vagas e fila de espera', 'menuRecalcular')
+    .addItem('Atualizar painel e base de análise', 'menuPainel')
     .addItem('Recalcular permanência e certificados', 'menuPermanencia')
+    .addItem('Criar cópia de segurança agora', 'menuBackup')
     .addSeparator()
     .addItem('Editar inscrito (linha selecionada em Inscritos)', 'menuInfoEditar')
     .addItem('Cancelar inscrição no evento (linha selecionada)', 'menuCancelarInscrito')
+    .addItem('Reativar inscrição no evento (linha selecionada)', 'menuReativarInscrito')
     .addItem('Cancelar vaga em atividade (linha selecionada em Inscricoes_Atividades)', 'menuCancelarVaga')
     .addItem('Inscrever alguém em atividade…', 'menuInscreverManual')
     .addItem('Reenviar QR do inscrito (linha selecionada)', 'menuReenviarQr')
@@ -81,7 +84,9 @@ function installTriggers_() {
   ScriptApp.getProjectTriggers().forEach(function (t) {
     if (t.getHandlerFunction() === 'tick') ScriptApp.deleteTrigger(t);
   });
+  ScriptApp.getProjectTriggers().forEach(function (t) { if (t.getHandlerFunction() === 'backupDiario') ScriptApp.deleteTrigger(t); });
   ScriptApp.newTrigger('tick').timeBased().everyMinutes(10).create();
+  ScriptApp.newTrigger('backupDiario').timeBased().everyDays(1).atHour(23).create();
 }
 
 /** Executado pelo gatilho a cada 10 minutos. */
@@ -91,16 +96,68 @@ function tick() {
   try { checkMinimos_(); } catch (e) { log_('erro_tick_minimos', 0, String(e)); }
   try { processOutbox_(40); } catch (e) { log_('erro_tick_outbox', 0, String(e)); }
   try { sendAlertDigest_(); } catch (e) { log_('erro_tick_digest', 0, String(e)); }
+  try {
+    var props = PropertiesService.getScriptProperties();
+    if (Date.now() - Number(props.getProperty('ULTIMO_PAINEL') || 0) > 30 * 60000) { atualizarPainel_(); props.setProperty('ULTIMO_PAINEL', String(Date.now())); }
+  } catch (e) { log_('erro_tick_painel', 0, String(e)); }
 }
 
-/** Edição direta na aba Atividades (vagas, abertura): atualiza contagens e promove a fila na hora. */
+function toast_(msg) { try { ss_().toast(msg, 'Semana de Eng. Produção', 8); } catch (e) { /* sem interface */ } }
+var EMAIL_RE_ = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+/**
+ * Edição direta na planilha.
+ * - Atividades: vagas/abertura atualizam contagens e promovem a fila na hora.
+ * - Inscritos: valida matrícula única, e-mail e status; e-mail corrigido reenvia o QR.
+ */
 function onEdit(e) {
   try {
-    var sh = e.range.getSheet();
-    if (sh.getName() !== SHEETS.ATIV) return;
-    var col = e.range.getColumn();
-    if (col < 7 || col > 10) return;
-    resetConfigCache_();
-    promoteAll_();
+    var sh = e.range.getSheet(), nome = sh.getName(), col = e.range.getColumn();
+    if (nome === SHEETS.ATIV) {
+      if (col < 7 || col > 10) return;
+      resetConfigCache_();
+      promoteAll_();
+    } else if (nome === SHEETS.INSC) {
+      validarEdicaoInscrito_(e);
+    }
   } catch (err) { /* a edição nunca deve falhar por causa disto */ }
+}
+
+function validarEdicaoInscrito_(e) {
+  var r = e.range, row = r.getRow(), col = r.getColumn();
+  if (row < 2 || r.getNumRows() !== 1 || r.getNumColumns() !== 1) return;
+  var campo = HEADERS[SHEETS.INSC][col - 1];
+  var antigo = e.oldValue === undefined ? '' : e.oldValue;
+  var novo = String(e.value === undefined ? r.getValue() : e.value).trim();
+  var id = sheet_(SHEETS.INSC).getRange(row, 1).getValue();
+  function reverter(msg) { r.setValue(antigo); toast_(msg); }
+  limparCache_();
+  if (campo === 'id' || campo === 'token') { reverter('Esta coluna não pode ser alterada: ela identifica a inscrição e o QR Code.'); return; }
+  if (campo === 'email') {
+    var em = normEmail_(novo);
+    if (!EMAIL_RE_.test(em)) { reverter('E-mail inválido. O valor anterior foi restaurado.'); return; }
+    r.setValue(em);
+    if (em !== normEmail_(antigo)) {
+      updateRow_(SHEETS.INSC, row, { status_email: 'PENDENTE' });
+      var ativo = readAll_(SHEETS.INSC).filter(function (x) { return x._row === row && x.status === 'ATIVA'; }).length;
+      if (ativo) enqueueEmail_(id, 'CONFIRMACAO');
+      toast_('E-mail atualizado. O QR Code será reenviado ao novo endereço em até 10 minutos.');
+    }
+  } else if (campo === 'matricula') {
+    var m = normMatricula_(novo);
+    if (!/^[A-Z0-9.\-]{4,20}$/.test(m)) { reverter('Matrícula inválida. O valor anterior foi restaurado.'); return; }
+    var dup = readAll_(SHEETS.INSC).some(function (x) { return x._row !== row && normMatricula_(x.matricula) === m; });
+    if (dup) { reverter('Já existe outro inscrito com esta matrícula. O valor anterior foi restaurado.'); return; }
+    r.setValue(m);
+  } else if (campo === 'status') {
+    var st = novo.toUpperCase();
+    if (st !== 'ATIVA' && st !== 'CANCELADA') { reverter('Status inválido. Use ATIVA ou CANCELADA.'); return; }
+    r.setValue(st);
+    if (st === 'CANCELADA' && String(antigo).toUpperCase() === 'ATIVA') {
+      cancelarInscrito_(id);
+      toast_('Inscrição cancelada: vagas liberadas e fila de espera atualizada.');
+    }
+  } else if (campo === 'nome' || campo === 'curso' || campo === 'periodo') {
+    r.setValue(normNome_(novo));
+  }
 }

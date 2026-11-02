@@ -5,7 +5,7 @@
   "description": "Inscrição e credenciamento da Semana de Engenharia de Produção (CAEPRO/UFPI): Google Sheets + Apps Script + GitHub Pages.",
   "scripts": {
     "test": "node tests/run.js && node tests/decode.js",
-    "test:ui": "node tests/ui-audit.js",
+    "test:ui": "node tests/ui-audit.js && node tests/ui-fluxos.js",
     "build": "node scripts/build-codigo.js",
     "check:dist": "node scripts/build-codigo.js && git diff --exit-code -- apps-script/dist/Codigo.gs"
   },

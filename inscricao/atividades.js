@@ -51,15 +51,26 @@
     var txt = a.lotada
       ? 'Todas as vagas estão ocupadas. Deseja entrar na fila de espera de "' + a.titulo + '"?'
       : 'Confirmar sua inscrição em "' + a.titulo + '"?';
-    if (!window.confirm(txt)) return;
-    b.disabled = true;
-    App.api({ action: 'enroll', token: token, atividadeId: a.id }).then(function (r) {
+    confirmar(txt).then(function (sim) {
+      if (!sim) return;
+      b.disabled = true;
+      return App.api({ action: 'enroll', token: token, atividadeId: a.id }).then(function (r) {
       if (!r.ok) { App.aviso($('msg'), 'erro', r.mensagem); b.disabled = false; return; }
       var m = r.status === 'FILA'
         ? 'Todas as vagas estavam ocupadas, e você entrou na fila de espera, na posição ' + r.posicao + '. Se uma vaga for liberada, você será inscrito automaticamente e receberá um e-mail.'
         : 'Inscrição confirmada. Enviaremos um e-mail de confirmação, que pode demorar alguns minutos para chegar.';
       App.aviso($('msg'), 'ok', m);
       carregar();
+      });
+    });
+  }
+
+  function confirmar(texto) {
+    var d = $('dlg'); $('dlgTxt').textContent = texto;
+    if (!d.showModal) return Promise.resolve(window.confirm(texto));   // navegadores muito antigos
+    return new Promise(function (ok) {
+      d.addEventListener('close', function f() { d.removeEventListener('close', f); ok(d.returnValue === 'sim'); });
+      d.returnValue = 'nao'; d.showModal(); $('dlgSim').focus();
     });
   }
 

@@ -56,6 +56,9 @@ function register_(p) {
   if (String(cfg.INSCRICOES).toUpperCase() !== 'ABERTAS') {
     return { ok: false, code: 'FECHADAS', mensagem: MSG.fechadas };
   }
+  // Proteção contra envio automático (robôs): campo-isca preenchido ou formulário enviado rápido demais.
+  if (String(p.campo_extra || '').trim()) { log_('inscricao_bloqueada', 0, 'campo-isca'); return { ok: false, code: 'RAPIDO', mensagem: MSG.rapido }; }
+  if (p.tempoMs !== undefined && Number(p.tempoMs) < 2000) { log_('inscricao_bloqueada', 0, 'rápido demais'); return { ok: false, code: 'RAPIDO', mensagem: MSG.rapido }; }
   var d = {
     nome: normNome_(p.nome), curso: normNome_(p.curso), periodo: normNome_(p.periodo),
     matricula: normMatricula_(p.matricula), email: normEmail_(p.email)
@@ -74,7 +77,7 @@ function register_(p) {
       });
       if (!recente) enqueueEmail_(existente.id, 'CONFIRMACAO');
       return {
-        ok: true, status: 'JA_INSCRITO',
+        ok: true, status: 'JA_INSCRITO', inscritoId: existente.id,
         mensagem: MSG.jaInscrito.replace('%EMAIL%', maskEmail_(existente.email))
       };
     }
@@ -85,11 +88,11 @@ function register_(p) {
       email: d.email, data_hora: now_(), status: 'ATIVA', status_email: 'PENDENTE'
     });
     enqueueEmail_(id, 'CONFIRMACAO');
-    return { ok: true, status: 'CRIADA', token: token, nome: d.nome, mensagem: MSG.sucesso };
+    return { ok: true, status: 'CRIADA', token: token, nome: d.nome, inscritoId: id, mensagem: MSG.sucesso };
   });
 
   if (res.ok) {
-    try { processOutbox_(3); } catch (e) { log_('erro_envio_imediato', 0, String(e)); }
+    try { processOutbox_(2, res.inscritoId); } catch (e) { log_('erro_envio_imediato', 0, String(e)); }
     log_('inscricao_' + res.status, Date.now() - t0, '');
   }
   return res;

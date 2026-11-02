@@ -194,7 +194,7 @@ function enroll_(p) {
     return r;
   });
   if (res.ok) {
-    try { processOutbox_(3); } catch (e) { log_('erro_envio_imediato', 0, String(e)); }
+    try { processOutbox_(2, insc.id); } catch (e) { log_('erro_envio_imediato', 0, String(e)); }
   }
   return res;
 }
@@ -272,5 +272,6 @@ function atualizarContagens_() {
     var max = vagasMax_(a), oc = conf[a.id] || 0;
     sh.getRange(a._row, 11, 1, 3).setValues([[oc, max === null ? 'sem limite' : Math.max(0, max - oc), fila[a.id] || 0]]);
   });
+  invalidar_(SHEETS.ATIV);
 }
 function atualizarContagensSeguro_() { try { atualizarContagens_(); } catch (e) { log_('erro_contagens', 0, String(e)); } }

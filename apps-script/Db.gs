@@ -18,8 +18,21 @@ function hoje_() {
   return Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
 }
 
-/** Lê todas as linhas da aba como objetos (com _row = número da linha na planilha). */
+var RA_ = {};
+function invalidar_(name) { delete RA_[name]; }
+function limparCache_() { RA_ = {}; CFG_CACHE_ = null; }
+
+/**
+ * Lê todas as linhas da aba como objetos (com _row = número da linha na planilha).
+ * Cada aba é lida uma única vez por execução (invalidada a cada gravação) e devolvida em cópias,
+ * o que reduz muito o tempo em que o lock fica preso quando muita gente usa ao mesmo tempo.
+ */
 function readAll_(name) {
+  if (!RA_[name]) RA_[name] = lerAba_(name);
+  return RA_[name].map(function (r) { return Object.assign({}, r); });
+}
+
+function lerAba_(name) {
   var values = sheet_(name).getDataRange().getValues();
   var headers = values[0] || HEADERS[name];
   var rows = [];
@@ -42,6 +55,7 @@ function appendObj_(name, obj) {
     return obj[h] === undefined || obj[h] === null ? '' : obj[h];
   });
   sheet_(name).appendRow(row);
+  invalidar_(name);
 }
 
 /** Atualiza colunas de uma linha. */
@@ -53,6 +67,7 @@ function updateRow_(name, rowNumber, changes) {
     if (col < 1) throw new Error('Coluna inexistente: ' + k);
     sh.getRange(rowNumber, col).setValue(changes[k]);
   });
+  invalidar_(name);
 }
 
 function nextId_(prefix, name) {
@@ -62,7 +77,11 @@ function nextId_(prefix, name) {
 
 function withLock_(fn) {
   var lock = LockService.getScriptLock();
-  lock.waitLock(25000);
+  try {
+    lock.waitLock(25000);
+  } catch (e) {
+    var busy = new Error('OCUPADO'); busy.code = 'OCUPADO'; throw busy;
+  }
   try {
     return fn();
   } finally {
@@ -78,7 +97,7 @@ function getConfig_() {
   CFG_CACHE_ = cfg;
   return cfg;
 }
-function resetConfigCache_() { CFG_CACHE_ = null; }
+function resetConfigCache_() { limparCache_(); }
 
 function log_(evento, duracaoMs, detalhe) {
   try {
