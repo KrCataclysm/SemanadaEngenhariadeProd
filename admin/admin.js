@@ -34,6 +34,7 @@
   function statusBadge(s) { return badge(s, s === 'ATIVA' || s === 'CONFIRMADA' || s === 'ENVIADO' ? 'ok' : (s === 'FILA' || s === 'PENDENTE' ? 'fila' : 'erro')); }
 
   function chamar(acao, extra) {
+    if (navigator.onLine === false) return Promise.resolve({ ok: false, code: 'REDE', mensagem: 'Você está sem conexão com a internet. As operações do painel só funcionam online; tente novamente quando a conexão voltar.' });
     return App.api(Object.assign({ action: acao, pin: S.pin, operador: S.operador }, extra || {})).then(function (r) {
       if (!r.ok && r.auth && S.logado) sair(r.mensagem);   // só falhas de autenticação encerram a sessão (erros de validação não)
       return r;
@@ -61,7 +62,7 @@
     ev.preventDefault();
     S.operador = $('operador').value.trim(); S.pin = $('senha').value;
     var b = $('btnLogin'); b.disabled = true; b.textContent = 'Verificando…';
-    App.api({ action: 'admin_login', pin: S.pin, operador: S.operador }).then(function (r) {
+    chamar('admin_login').then(function (r) {
       b.disabled = false; b.textContent = 'Entrar';
       if (!r.ok) { avisar('erro', r.mensagem); return; }
       try { sessionStorage.setItem('adm', JSON.stringify({ p: S.pin, o: S.operador })); } catch (e) { /* sem armazenamento */ }
@@ -77,7 +78,8 @@
   function mostrarApp(resumo) {
     $('login').classList.add('oculto'); $('app').classList.remove('oculto'); $('toast').classList.add('oculto');
     $('quem').textContent = 'Administrador: ' + S.operador;
-    irPara('inicio', resumo);
+    var aba = new URLSearchParams(location.search).get('aba');
+    if (aba && aba !== 'inicio' && ABAS.indexOf(aba) >= 0) irPara(aba); else irPara('inicio', resumo);
   }
 
   // ---------- abas ----------
@@ -266,6 +268,32 @@
         return h('div', { class: 'item linha' }, [h('span', { class: 'grow', text: t[1] }), h('button', { type: 'button', class: 'sec peq', text: 'Baixar CSV', onclick: function () {
           chamar('admin_tabela', { nome: t[0] }).then(function (r) { if (ok(r)) { baixar(t[0] + '-' + hojeStr() + '.csv', csv(r.headers, r.rows)); avisar('ok', r.rows.length + ' linha(s) exportada(s).'); } }); } })]);
       }))));
+  }
+
+  // ---------- aplicativo instalável (PWA) ----------
+  var evInstalar = null;
+  function emApp() { return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true; }
+  function atualizarRede() { $('chRede').classList.toggle('oculto', navigator.onLine !== false); }
+  window.addEventListener('online', atualizarRede); window.addEventListener('offline', atualizarRede); atualizarRede();
+  window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); evInstalar = e; if (!emApp()) $('btnInstalar').classList.remove('oculto'); });
+  window.addEventListener('appinstalled', function () { evInstalar = null; $('btnInstalar').classList.add('oculto'); $('dicaInstalar').classList.add('oculto'); });
+  $('btnInstalar').addEventListener('click', function () {
+    if (!evInstalar) return;
+    evInstalar.prompt(); evInstalar.userChoice.then(function () { evInstalar = null; $('btnInstalar').classList.add('oculto'); });
+  });
+  var ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if (ios && !emApp()) $('dicaInstalar').classList.remove('oculto');
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+    var recarregar = false;
+    navigator.serviceWorker.register('sw.js').then(function (reg) {
+      function oferecer(w) { $('avisoAtualiza').classList.remove('oculto'); $('btnAtualiza').onclick = function () { recarregar = true; w.postMessage('ATUALIZAR'); }; }
+      if (reg.waiting && navigator.serviceWorker.controller) oferecer(reg.waiting);
+      reg.addEventListener('updatefound', function () {
+        var w = reg.installing; if (!w) return;
+        w.addEventListener('statechange', function () { if (w.state === 'installed' && navigator.serviceWorker.controller) oferecer(w); });
+      });
+    }).catch(function () { /* funciona sem o modo instalável */ });
+    navigator.serviceWorker.addEventListener('controllerchange', function () { if (recarregar) location.reload(); });
   }
 
   // ---------- inicialização ----------

@@ -1,0 +1,59 @@
+{
+  "name": "Administração — Semana de Engenharia de Produção",
+  "short_name": "Admin Semana",
+  "description": "Painel de administração da Semana de Engenharia de Produção: inscritos, atividades, vagas, alertas e exportação de dados.",
+  "lang": "pt-BR",
+  "dir": "ltr",
+  "start_url": "./?origem=pwa",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui",
+    "browser"
+  ],
+  "orientation": "any",
+  "background_color": "#D9D1C8",
+  "theme_color": "#0F1B2D",
+  "categories": [
+    "productivity",
+    "business"
+  ],
+  "icons": [
+    {
+      "src": "../assets/icons/admin-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "../assets/icons/admin-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "../assets/icons/admin-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Buscar inscritos",
+      "short_name": "Inscritos",
+      "url": "./?aba=inscritos"
+    },
+    {
+      "name": "Atividades e vagas",
+      "short_name": "Atividades",
+      "url": "./?aba=atividades"
+    },
+    {
+      "name": "Alertas e e-mails",
+      "short_name": "Alertas",
+      "url": "./?aba=alertas"
+    }
+  ]
+}

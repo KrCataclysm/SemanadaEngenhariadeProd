@@ -82,3 +82,13 @@ Endereço: `https://krcataclysm.github.io/SemanadaEngenhariadeProd/admin/` (não
 - O QR (token) nunca é exibido nem exportado. Os CSV protegem contra fórmulas maliciosas ao abrir no Excel.
 - Toda alteração fica registrada na aba **Log** com o nome informado no login.
 - Dados pessoais: baixe CSV só quando necessário e apague depois.
+
+### Instalar o painel como aplicativo (PWA)
+
+O painel (`/admin/`) é instalável em qualquer aparelho; só a "casca" (telas, estilos, ícones) fica guardada — dados de inscritos nunca são guardados no aparelho, e as alterações exigem internet.
+
+- **Android / Chrome / Edge (celular, tablet ou computador):** abra o endereço do painel e toque em **Instalar aplicativo** (botão no topo) ou no menu do navegador → *Instalar aplicativo*.
+- **iPhone / iPad (Safari):** botão **Compartilhar** → **Adicionar à Tela de Início**.
+- Atalhos (toque longo no ícone, Android/desktop): Buscar inscritos, Atividades e vagas, Alertas.
+- Quando houver nova versão, aparece o aviso "Atualizar agora".
+- Testes: `npm run test:ui` (inclui `ui-pwa.js`, instalabilidade, e `ui-dispositivos.js`, 14 aparelhos).

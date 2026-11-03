@@ -8,9 +8,13 @@
 <meta name="theme-color" content="#0F1B2D">
 <meta name="color-scheme" content="light">
 <meta name="robots" content="noindex, nofollow">
+<meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Admin Semana"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Administração — Semana de Engenharia de Produção</title>
+<link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="../assets/logo-evento.svg" type="image/svg+xml">
 <link rel="icon" href="../assets/icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="../assets/icons/admin-apple-touch-icon.png">
 <link rel="preload" href="../assets/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="../assets/fonts/sora-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="../assets/css/style.css">
@@ -25,6 +29,12 @@
 <noscript><div class="aviso erro">Para utilizar o painel, ative o JavaScript no navegador.</div></noscript>
 <main id="conteudo">
   <div id="toast" class="toast aviso oculto" role="status" aria-live="polite" tabindex="-1"></div>
+  <div id="avisoAtualiza" class="aviso oculto" role="status"><span>Há uma nova versão do painel. </span><button type="button" class="peq" id="btnAtualiza">Atualizar agora</button></div>
+  <div class="linha mb">
+    <span class="grow chip off oculto" id="chRede" role="status">Sem conexão: as alterações exigem internet</span>
+    <button type="button" class="sec peq oculto" id="btnInstalar">Instalar aplicativo</button>
+  </div>
+  <p id="dicaInstalar" class="aviso oculto">Para instalar no iPhone ou iPad: toque em <strong>Compartilhar</strong> e depois em <strong>Adicionar à Tela de Início</strong>.</p>
 
   <section id="login" class="card estreito">
     <h1>Acesso do administrador</h1>
