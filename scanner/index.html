@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
@@ -32,7 +32,7 @@
     <h1>Acesso da equipe</h1>
     <p>Informe seu nome e o PIN fornecido pela organização para iniciar o credenciamento.</p>
     <form id="formLogin">
-      <label for="operador">Seu nome</label><input id="operador" maxlength="40" autocomplete="off" autocapitalize="words" required>
+      <label for="operador">Seu nome</label><input type="text" id="operador" maxlength="40" autocomplete="off" autocapitalize="words" required>
       <label for="pin">PIN</label><input id="pin" type="password" inputmode="numeric" autocomplete="off" required>
       <button class="form-btn" id="btnLogin" type="submit">Entrar</button>
     </form>
@@ -58,7 +58,7 @@
 
   <section id="scan" class="oculto">
     <div class="card">
-      <h1 id="titModo" class="mini"></h1>
+      <h1 id="titModo" class="mini">Scanner</h1>
       <div class="chips"><span class="chip" id="chRede" role="status">Conectando…</span><span class="chip" id="chFila">Pendentes: 0</span><span class="chip" id="chQtd">0 leituras</span></div>
       <div class="scan-grid">
         <div class="video"><video id="video" playsinline muted aria-label="Imagem da câmera"></video><div class="mira" aria-hidden="true"></div></div>
@@ -75,7 +75,7 @@
       <div id="avisoCam" class="aviso erro oculto" role="alert"></div>
     </div>
     <div id="busca" class="card oculto">
-      <label for="q">Nome ou matrícula</label><input id="q" autocomplete="off">
+      <label for="q">Nome ou matrícula</label><input type="text" id="q" autocomplete="off">
       <div id="resBusca" aria-live="polite"></div>
     </div>
     <div id="problemas" class="card oculto"><h2>Registros que precisam de conferência</h2><div id="listaProb"></div></div>

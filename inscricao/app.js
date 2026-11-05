@@ -13,11 +13,20 @@
   }
 
   // O formulário só aparece quando o sistema confirma que as inscrições estão abertas.
+  // Para não fazer a pessoa esperar a resposta do sistema (que pode levar alguns segundos), lembramos por 10 minutos que
+  // estavam abertas: o formulário aparece na hora e a confirmação segue em segundo plano. Se tiverem fechado, a tela muda
+  // para o aviso, e o servidor recusa qualquer envio de qualquer forma.
+  var CHAVE = 'inscAbertas';
+  function lembrado() { try { var o = JSON.parse(localStorage.getItem(CHAVE) || 'null'); return !!(o && o.ab && Date.now() - o.t < 600000); } catch (e) { return false; } }
+  function lembrar(ab) { try { if (ab) localStorage.setItem(CHAVE, JSON.stringify({ ab: true, t: Date.now() })); else localStorage.removeItem(CHAVE); } catch (e) { /* sem armazenamento */ } }
   function verificar() {
-    mostrar('carregando', true); mostrar('fechado', false); mostrar('formCard', false);
+    var jaMostrando = lembrado();
+    mostrar('fechado', false); mostrar('carregando', !jaMostrando); mostrar('formCard', jaMostrando);
     App.api(null).then(function (c) {
       mostrar('carregando', false);
-      if (c && c.ok && c.inscricoesAbertas) { mostrar('formCard', true); return; }
+      if (c && c.ok && c.inscricoesAbertas) { lembrar(true); mostrar('formCard', true); return; }
+      if (jaMostrando && !(c && c.ok)) return;   // falha de rede: mantém o formulário; o servidor valida no envio
+      lembrar(false); mostrar('formCard', false);
       $('msgFechado').textContent = (c && c.ok) ? c.mensagemFechadas
         : ((c && c.mensagem) || 'Não foi possível verificar o status das inscrições. Tente novamente em instantes.');
       mostrar('fechado', true);

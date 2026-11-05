@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
@@ -40,7 +40,7 @@
     <h1>Acesso do administrador</h1>
     <p>Informe seu nome, para registrar as alterações que você fizer, e a senha de administrador.</p>
     <form id="formLogin">
-      <label for="operador">Seu nome</label><input id="operador" maxlength="40" autocomplete="off" autocapitalize="words" required>
+      <label for="operador">Seu nome</label><input type="text" id="operador" maxlength="40" autocomplete="off" autocapitalize="words" required>
       <label for="senha">Senha de administrador</label><input id="senha" type="password" autocomplete="off" required>
       <button class="form-btn" id="btnLogin" type="submit">Entrar</button>
     </form>
@@ -62,7 +62,7 @@
     <section id="p-inscritos" role="tabpanel" aria-labelledby="t-inscritos" class="oculto">
       <div class="card">
         <label for="q" class="sem-topo">Filtrar por nome, matrícula ou e-mail</label>
-        <input id="q" autocomplete="off" placeholder="Digite para filtrar a lista">
+        <input type="text" id="q" autocomplete="off" placeholder="Digite para filtrar a lista">
         <p id="contaLista" class="sub topo-1" aria-live="polite"></p>
         <div id="resBusca" class="topo-1" aria-live="polite"></div>
       </div>
