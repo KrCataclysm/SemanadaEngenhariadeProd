@@ -902,19 +902,19 @@ function buildEmail_(insc, tipo, atividade) {
   var logo = '<img src="cid:logo" alt="" width="56" height="56" style="border-radius:50%;background:#fff;display:block">';
 
   var html =
-    '<div style="background:' + COR.bege + ';padding:24px 12px;font-family:Inter,Arial,sans-serif;color:' + COR.grafite + '">' +
+    '<div style="background:' + COR.bege + ';padding:16px 8px;font-family:Inter,Arial,sans-serif;color:' + COR.grafite + '">' +
     '<table role="presentation" width="100%" style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:10px;overflow:hidden" cellspacing="0" cellpadding="0">' +
     '<tr><td style="background:' + COR.azul + ';padding:22px 28px;border-bottom:4px solid ' + COR.laranja + '"><table role="presentation" width="100%"><tr>' +
     '<td><div style="font-family:Sora,Arial,sans-serif;font-size:13px;letter-spacing:2px;color:' + COR.bege + '">11, 12 E 13 DE NOVEMBRO DE 2026</div>' +
     '<div style="font-family:Sora,Arial,sans-serif;font-size:22px;font-weight:700;color:#ffffff;margin-top:6px">' + esc_(evento) + '</div></td>' +
     '<td width="64" align="right">' + logo + '</td></tr></table></td></tr>' +
-    '<tr><td style="padding:28px">' +
+    '<tr><td style="padding:24px 20px">' +
     '<h1 style="font-family:Sora,Arial,sans-serif;font-size:20px;color:' + COR.azul + ';margin:0 0 14px">' + esc_(titulo) + '</h1>' +
     '<p style="margin:0 0 10px">Prezado(a) ' + esc_(insc.nome) + ',</p>' +
     '<p style="margin:0 0 18px;line-height:1.5">' + esc_(intro) + '</p>' +
-    '<div style="text-align:center;background:' + COR.bege + ';border-radius:8px;padding:18px">' +
+    '<div style="text-align:center;background:' + COR.bege + ';border-radius:8px;padding:16px 12px">' +
     '<div style="font-family:Sora,Arial,sans-serif;font-weight:700;color:' + COR.azul + ';margin-bottom:10px">SEU QR CODE DE ACESSO</div>' +
-    '<img src="cid:qr" alt="QR Code de acesso" width="240" height="240" style="background:#ffffff;padding:8px;border-radius:6px">' + botaoQr + '</div>' +
+    '<img src="cid:qr" alt="QR Code de acesso" width="240" height="240" style="display:block;margin:0 auto;width:100%;max-width:240px;height:auto;box-sizing:border-box;background:#ffffff;padding:8px;border-radius:6px">' + botaoQr + '</div>' +
     listaHtml + botao +
     '<p style="margin:22px 0 6px;font-weight:700;color:' + COR.azul + '">Instruções</p>' +
     '<ul style="margin:0;padding-left:20px;line-height:1.5">' +
