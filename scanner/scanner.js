@@ -49,8 +49,8 @@
   function carregarLista(l) {
     S.lista = l; S.porToken = {}; S.porId = {}; S.atv = {}; S.ia = l.ia || {};
     l.i.forEach(function (r) {
-      var o = { id: r[0], token: r[1], nome: r[2], matricula: r[3], curso: r[4], status: r[5] };
-      S.porToken[o.token] = o; S.porId[o.id] = o;
+      var o = { id: r[0], h: r[1], nome: r[2], matricula: r[3], curso: r[4], status: r[5] };   // r[1] é o SHA-256 do token: este aparelho nunca guarda QR Codes válidos
+      S.porToken[o.h] = o; S.porId[o.id] = o;
     });
     l.a.forEach(function (a) { S.atv[a[0]] = { id: a[0], dia: a[1], ini: a[2], fim: a[3], titulo: a[4], tipo: a[5], exige: !!a[6] }; });
     S.estado = Object.assign({}, l.p);
@@ -92,7 +92,7 @@
         feitos[x.clientId] = true;
         var it = lote.filter(function (l) { return l.clientId === x.clientId; })[0];
         if (['TOKEN_INVALIDO', 'CANCELADA', 'NAO_INSCRITO', 'ERRO', 'DADOS_INVALIDOS'].indexOf(x.resultado) >= 0 && it && it.kind !== 'undo') {
-          S.problemas.push({ nome: x.nome || (S.porToken[it.token] || {}).nome || 'QR desconhecido', motivo: x.resultado, quando: hora() });
+          S.problemas.push({ nome: x.nome || (S.porToken[it.h || it.token] || {}).nome || 'QR desconhecido', motivo: x.resultado, quando: hora() });
           renderProblemas();
         }
       });
@@ -134,7 +134,17 @@
   }
 
   // ---------- leitura de um token ----------
+  /** SHA-256 (hex) do texto lido no QR Code. */
+  function sha256(texto) {
+    return crypto.subtle.digest('SHA-256', new TextEncoder().encode(texto)).then(function (buf) {
+      return Array.prototype.map.call(new Uint8Array(buf), function (b) { return ('0' + b.toString(16)).slice(-2); }).join('');
+    });
+  }
   function processar(token, opcoes) {
+    if (!window.crypto || !crypto.subtle) { resultado('err', 'NAVEGADOR SEM SUPORTE', '', 'Abra o scanner em um navegador atualizado (Chrome ou Safari) com endereço seguro (https).'); feedback('err'); return Promise.resolve(); }
+    return sha256(String(token)).then(function (h) { processarH(h, opcoes); });
+  }
+  function processarH(token, opcoes) {   // `token` aqui é o hash do QR
     opcoes = opcoes || {};
     var t0 = performance.now();
     var agora = Date.now();
@@ -146,7 +156,7 @@
       resultado('warn', 'ATUALIZANDO A LISTA…', '', 'QR Code não encontrado na lista deste aparelho. Verificando no sistema.');
       api({ action: 'scan_lista', pin: S.pin }).then(function (l) {
         if (l.ok) { carregarLista(l); LS.set('scanner_lista', JSON.stringify(l)); }
-      }).catch(function () { /* segue com a lista atual */ }).then(function () { processar(token, { manual: true, retry: true, forcar: opcoes.forcar }); });
+      }).catch(function () { /* segue com a lista atual */ }).then(function () { processarH(token, { manual: true, retry: true, forcar: opcoes.forcar }); });
       return;
     }
     if (!insc) {
@@ -157,7 +167,7 @@
       resultado('err', 'INSCRIÇÃO CANCELADA', insc.nome, 'Não libere a entrada. Encaminhe a pessoa à coordenação da CAEPRO.');
       feedback('err'); return;
     }
-    var item = { kind: 'scan', modo: S.modo, token: token, operador: S.operador, clientId: uuid(), ts: Date.now() };
+    var item = { kind: 'scan', modo: S.modo, h: token, operador: S.operador, clientId: uuid(), ts: Date.now() };
     if (S.modo === 'PORTARIA') {
       var key = insc.id + '|' + S.dia, prev = S.estado[key] || null;
       var tipo = prev === 'ENTRADA' ? 'SAIDA' : 'ENTRADA';
@@ -175,7 +185,7 @@
       var sit = (S.ia[S.atividadeId] || {})[insc.id];
       if (at && at.exige && sit !== 'C' && !opcoes.forcar) {
         var b = document.createElement('button'); b.type = 'button'; b.textContent = 'Registrar mesmo assim';
-        b.addEventListener('click', function () { processar(token, { manual: true, forcar: true }); });
+        b.addEventListener('click', function () { processarH(token, { manual: true, forcar: true }); });
         resultado('warn', 'SEM INSCRIÇÃO NESTA ATIVIDADE', insc.nome,
           sit === 'F' ? 'A pessoa está na fila de espera desta atividade, sem vaga confirmada.' : 'A pessoa não está inscrita nesta atividade, que exige inscrição prévia.', b);
         feedback('warn'); return;
@@ -197,7 +207,7 @@
     reaplicar(undo);
     S.leituras = Math.max(0, S.leituras - 1);
     S.fila.push(undo); S.ultimo = null; salvarFila();
-    resultado('warn', 'LEITURA DESFEITA', (S.porToken[u.token] || {}).nome || '', 'O registro foi anulado.');
+    resultado('warn', 'LEITURA DESFEITA', (S.porToken[u.h] || {}).nome || '', 'O registro foi anulado.');
     flush();
   }
 
@@ -317,7 +327,7 @@
       var d = document.createElement('div'); d.className = 'busca-item';
       var info = document.createElement('div'); info.className = 'info'; info.textContent = r[2] + ' — mat. ' + r[3];
       var b = document.createElement('button'); b.type = 'button'; b.textContent = 'Registrar';
-      b.addEventListener('click', function () { processar(r[1], { manual: true }); mostrar('busca', false); $('q').value = ''; box.textContent = ''; });
+      b.addEventListener('click', function () { processarH(r[1], { manual: true }); mostrar('busca', false); $('q').value = ''; box.textContent = ''; });
       d.appendChild(info); d.appendChild(b); box.appendChild(d);
     });
     if (!achados.length) box.textContent = 'Nenhum inscrito encontrado com esse nome ou matrícula.';
@@ -330,6 +340,14 @@
   $('btnDesfazer').addEventListener('click', desfazer);
   $('btnBuscar').addEventListener('click', function () { mostrar('busca', $('busca').classList.contains('oculto')); $('q').focus(); });
   $('btnTrocar').addEventListener('click', irModo);
+  // Encerra o uso: apaga a lista de inscritos, a fila e o PIN deste aparelho (dados pessoais não devem ficar em aparelho emprestado).
+  $('btnSair').addEventListener('click', function () {
+    var pend = S.fila.length;
+    if (pend && !window.confirm(pend + ' registro(s) ainda não foram enviados ao sistema e serão perdidos se você sair agora. Conecte-se à internet e aguarde o envio, ou toque em OK para sair mesmo assim.')) return;
+    pararCamera(); ['scanner_lista', 'scanner_fila', 'scanner_operador', 'scanner_ultimo_envio_ms'].forEach(LS.del);
+    try { sessionStorage.removeItem('scanner_pin'); } catch (e) { /* ignora */ }
+    location.reload();
+  });
   $('q').addEventListener('input', buscar);
   window.addEventListener('online', function () { S.online = true; atualizarChips(); flush(); });
   window.addEventListener('offline', function () { S.online = false; atualizarChips(); });
@@ -341,7 +359,7 @@
 
   try { S.fila = JSON.parse(LS.get('scanner_fila') || '[]'); } catch (e) { S.fila = []; }
   $('operador').value = LS.get('scanner_operador') || '';
-  try { var l0 = JSON.parse(LS.get('scanner_lista') || 'null'); if (l0) carregarLista(l0); } catch (e) { /* ignora */ }
+  try { var l0 = JSON.parse(LS.get('scanner_lista') || 'null'); if (l0 && l0.v === 2) carregarLista(l0); else if (l0) LS.del('scanner_lista'); } catch (e) { /* ignora */ }   // lista de versão antiga (com tokens) é descartada
   atualizarModoUI(); atualizarChips();
   var pinSalvo = ''; try { pinSalvo = sessionStorage.getItem('scanner_pin') || ''; } catch (e) { /* ignora */ }
   if (pinSalvo && S.lista && $('operador').value) { S.pin = pinSalvo; S.operador = $('operador').value; irModo(); }

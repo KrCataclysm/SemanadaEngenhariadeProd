@@ -79,6 +79,15 @@ let ok = 0; const t = async (nome, fn) => { try { await fn(); ok++; console.log(
     await pg.waitForFunction(() => /ENTRADA/.test(document.getElementById('res').textContent), null, { timeout: 8000 });
     assert(/Retardatario/.test(await pg.textContent('#res'))); await c.close();
   });
+  await t('scanner: o aparelho guarda só hashes (nenhum QR válido) e "Sair e limpar" apaga lista, fila e PIN', async () => {
+    const [c, pg] = await novo(); await pg.goto(B + '/scanner/'); await pg.fill('#operador', 'Ana'); await pg.fill('#pin', '4321'); await pg.click('#btnLogin');
+    await pg.waitForSelector('#modo:not(.oculto)');
+    const lista = await pg.evaluate(() => localStorage.getItem('scanner_lista')); assert(lista && !lista.includes(base.token), 'token ausente do armazenamento do aparelho');
+    assert(!(await pg.evaluate(() => JSON.stringify(Object.assign({}, localStorage, sessionStorage)))).includes(base.token));
+    await pg.click('label:has(input[value="2026-11-11"]) span'); await pg.click('#btnIniciar'); await pg.waitForSelector('#scan:not(.oculto)');
+    await pg.click('#btnSair'); await pg.waitForSelector('#login:not(.oculto)');
+    assert.strictEqual(await pg.evaluate(() => localStorage.getItem('scanner_lista')), null); assert.strictEqual(await pg.evaluate(() => sessionStorage.getItem('scanner_pin')), null); await c.close();
+  });
   await t('scanner: QR inexistente continua sendo recusado com mensagem clara', async () => {
     const [c, pg] = await novo(); await pg.goto(B + '/scanner/'); await pg.fill('#operador', 'Ana'); await pg.fill('#pin', '4321'); await pg.click('#btnLogin');
     await pg.waitForSelector('#modo:not(.oculto)'); await pg.click('label:has(input[value="2026-11-11"]) span'); await pg.click('#btnIniciar'); await pg.waitForSelector('#scan:not(.oculto)');
