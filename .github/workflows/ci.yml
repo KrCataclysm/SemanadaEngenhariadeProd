@@ -14,7 +14,7 @@ jobs:
         with: { node-version: 22 }
       - run: npm test
       - name: HTML válido (html-validate)
-        run: npm run lint:html
+        run: npm ci --no-audit --no-fund && npm run lint:html
       - name: Arquivo único do Apps Script está atualizado
         run: npm run check:dist
   interface:
