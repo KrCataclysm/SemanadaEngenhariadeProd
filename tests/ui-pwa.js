@@ -7,7 +7,7 @@ let ok = 0; const t = async (n, fn) => { try { await fn(); ok++; console.log('  
   await S.listen();
   const br = await chromium.launch(); const ctx = await br.newContext({ viewport: { width: 420, height: 800 } }); const pg = await ctx.newPage(); pg.setDefaultTimeout(8000); const pgPrincipal = pg;
   const erros = []; pg.on('pageerror', e => erros.push(String(e))); pg.on('console', m => m.type() === 'error' && erros.push(m.text()));
-  const prontoAdmin = async (pg = pgPrincipal) => { await pg.waitForFunction(() => !!navigator.serviceWorker.controller); await pg.waitForFunction(async () => { const k = await caches.keys(); return k.includes('admin-v1') && !!(await (await caches.open('admin-v1')).match('/assets/icons/admin-192.png')); }); };
+  const prontoAdmin = async (pg = pgPrincipal) => { await pg.waitForFunction(() => !!navigator.serviceWorker.controller); await pg.waitForFunction(async () => { const k = await caches.keys(); return k.includes('admin-v2') && !!(await (await caches.open('admin-v2')).match('/assets/icons/admin-192.png')); }); };
   const man = JSON.parse(fs.readFileSync(path.join(S.root, 'admin/manifest.webmanifest'), 'utf8'));
   await t('manifesto do painel completo (standalone, escopo, ícones existentes e maskable)', async () => {
     assert.strictEqual(man.display, 'standalone'); assert(man.name && man.short_name.length <= 12); assert.strictEqual(man.scope, './'); assert(man.start_url && man.theme_color && man.background_color);

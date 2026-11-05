@@ -1,6 +1,6 @@
 /* Service worker do scanner: guarda a "casca" do aplicativo para abrir mesmo sem internet no local do evento.
    As chamadas ao sistema (Apps Script) nunca passam por aqui: o scanner trata a conexão e a fila por conta própria. */
-const VERSAO = 'scanner-v1';
+const VERSAO = 'scanner-v2';
 const ARQUIVOS = [
   './', 'index.html', 'scanner.js', 'vendor/jsQR.js', 'manifest.webmanifest', '../inscricao/config.js',
   '../assets/css/style.css', '../assets/logo-evento.svg', '../assets/logo-caepro.png',

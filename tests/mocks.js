@@ -46,7 +46,7 @@ function makeEnv(opts = {}) {
           f === 'HH:mm' ? `${p(x.getHours())}:${p(x.getMinutes())}` :
           `${x.getFullYear()}-${p(x.getMonth() + 1)}-${p(x.getDate())} ${p(x.getHours())}:${p(x.getMinutes())}:${p(x.getSeconds())}`; },
       base64Decode: s => Array.from(Buffer.from(s, 'base64')),
-      newBlob: (bytes, type, name) => ({ bytes, type, name })
+      newBlob: (bytes, type, name) => { const b = { bytes, type, name, copyBlob() { return Object.assign({}, b); }, setName(n) { b.name = n; return b; } }; return b; }
     },
     Session: { getScriptTimeZone: () => 'America/Fortaleza', getEffectiveUser: () => ({ getEmail: () => 'organizador@exemplo.com' }) },
     MailApp: {
