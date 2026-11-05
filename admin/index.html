@@ -48,7 +48,7 @@
 
   <div id="app" class="oculto">
     <h1 class="sr-only">Painel de administração</h1>
-    <div class="linha mb"><div class="grow"><strong id="quem"></strong></div><button type="button" class="sec peq" id="btnSair">Sair</button></div>
+    <div class="linha mb"><div class="grow"><strong id="quem"></strong></div><a class="btn sec peq" id="lnkScanner" href="../scanner/">Abrir scanner</a><button type="button" class="sec peq" id="btnSair">Sair</button></div>
     <div class="tabs" role="tablist" aria-label="Seções">
       <button type="button" role="tab" id="t-inicio" aria-controls="p-inicio" aria-selected="true">Início</button>
       <button type="button" role="tab" id="t-inscritos" aria-controls="p-inscritos" aria-selected="false">Inscritos</button>
@@ -61,8 +61,9 @@
 
     <section id="p-inscritos" role="tabpanel" aria-labelledby="t-inscritos" class="oculto">
       <div class="card">
-        <label for="q" class="sem-topo">Buscar por nome, matrícula ou e-mail</label>
-        <input id="q" autocomplete="off" placeholder="Digite ao menos 2 caracteres">
+        <label for="q" class="sem-topo">Filtrar por nome, matrícula ou e-mail</label>
+        <input id="q" autocomplete="off" placeholder="Digite para filtrar a lista">
+        <p id="contaLista" class="sub topo-1" aria-live="polite"></p>
         <div id="resBusca" class="topo-1" aria-live="polite"></div>
       </div>
       <div id="ficha"></div>
