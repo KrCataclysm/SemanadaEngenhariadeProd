@@ -298,16 +298,18 @@
   var ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   if (ios && !emApp()) $('dicaInstalar').classList.remove('oculto');
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
-    var recarregar = false;
+    var tinhaControle = !!navigator.serviceWorker.controller;
     navigator.serviceWorker.register('sw.js').then(function (reg) {
-      function oferecer(w) { $('avisoAtualiza').classList.remove('oculto'); $('btnAtualiza').onclick = function () { recarregar = true; w.postMessage('ATUALIZAR'); }; }
-      if (reg.waiting && navigator.serviceWorker.controller) oferecer(reg.waiting);
-      reg.addEventListener('updatefound', function () {
-        var w = reg.installing; if (!w) return;
-        w.addEventListener('statechange', function () { if (w.state === 'installed' && navigator.serviceWorker.controller) oferecer(w); });
-      });
+      var checar = function () { try { reg.update(); } catch (e) { /* ignora */ } };
+      setInterval(checar, 5 * 60 * 1000);
+      document.addEventListener('visibilitychange', function () { if (!document.hidden) checar(); });
     }).catch(function () { /* funciona sem o modo instalável */ });
-    navigator.serviceWorker.addEventListener('controllerchange', function () { if (recarregar) location.reload(); });
+    // Nova versão assumiu o controle: na tela de login recarrega sozinho; com o painel em uso, avisa (para não perder o que está sendo digitado).
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (!tinhaControle) { tinhaControle = true; return; }
+      if (!S.logado) { location.reload(); return; }
+      $('avisoAtualiza').classList.remove('oculto'); $('btnAtualiza').onclick = function () { location.reload(); };
+    });
   }
 
   // ---------- inicialização ----------

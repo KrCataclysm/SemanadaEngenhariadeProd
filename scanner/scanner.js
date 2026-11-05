@@ -347,6 +347,19 @@
   if (pinSalvo && S.lista && $('operador').value) { S.pin = pinSalvo; S.operador = $('operador').value; irModo(); }
   if (S.fila.length && pinSalvo) { S.pin = pinSalvo; flush(); }
 
-  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) { navigator.serviceWorker.register('sw.js').catch(function () { /* funciona sem o modo offline */ }); }
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+    var tinhaControle = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.register('sw.js').then(function (reg) {
+      var checar = function () { try { reg.update(); } catch (e) { /* ignora */ } };
+      setInterval(checar, 5 * 60 * 1000);
+      document.addEventListener('visibilitychange', function () { if (!document.hidden) checar(); });
+    }).catch(function () { /* funciona sem o modo offline */ });
+    // Nova versão: no login recarrega sozinho; durante o uso nunca interrompe a leitura, só avisa (a fila de registros fica salva no aparelho).
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (!tinhaControle) { tinhaControle = true; return; }
+      if (!S.pin) { location.reload(); return; }
+      $('avisoAtualiza').classList.remove('oculto'); $('btnAtualiza').onclick = function () { location.reload(); };
+    });
+  }
   window.__scanner = { processar: processar, estado: S }; // usado nos testes automatizados
 })();
