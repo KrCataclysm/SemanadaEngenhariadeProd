@@ -144,6 +144,8 @@
     if (!window.crypto || !crypto.subtle) { resultado('err', 'NAVEGADOR SEM SUPORTE', '', 'Abra o scanner em um navegador atualizado (Chrome ou Safari) com endereço seguro (https).'); feedback('err'); return Promise.resolve(); }
     return sha256(String(token)).then(function (h) { processarH(h, opcoes); });
   }
+  /** Dados para conferir a identidade na porta (documento): ajuda a diferenciar homônimos. */
+  function ident(i) { return 'Mat. ' + i.matricula + (i.curso ? ' · ' + i.curso : ''); }
   function processarH(token, opcoes) {   // `token` aqui é o hash do QR
     opcoes = opcoes || {};
     var t0 = performance.now();
@@ -164,7 +166,7 @@
       feedback('err'); return;
     }
     if (insc.status !== 'ATIVA') {
-      resultado('err', 'INSCRIÇÃO CANCELADA', insc.nome, 'Não libere a entrada. Encaminhe a pessoa à coordenação da CAEPRO.');
+      resultado('err', 'INSCRIÇÃO CANCELADA', insc.nome, 'Não libere a entrada. Encaminhe a pessoa à coordenação da CAEPRO. ' + ident(insc));
       feedback('err'); return;
     }
     var item = { kind: 'scan', modo: S.modo, h: token, operador: S.operador, clientId: uuid(), ts: Date.now() };
@@ -174,12 +176,12 @@
       item.dia = S.dia; item.efeito = { t: 'estado', key: key, val: tipo, prev: prev };
       S.estado[key] = tipo;
       S.ultimo = item;
-      resultado(tipo === 'ENTRADA' ? 'entrada' : 'saida', tipo === 'ENTRADA' ? 'ENTRADA' : 'SAÍDA', insc.nome, hora() + ' — ' + ddmm(S.dia));
+      resultado(tipo === 'ENTRADA' ? 'entrada' : 'saida', tipo === 'ENTRADA' ? 'ENTRADA' : 'SAÍDA', insc.nome, hora() + ' — ' + ddmm(S.dia) + ' — ' + ident(insc));
       feedback(tipo === 'ENTRADA' ? 'entrada' : 'saida');
     } else {
       var k2 = insc.id + '|' + S.atividadeId;
       if (S.pres[k2]) {
-        resultado('warn', 'JÁ REGISTRADO', insc.nome, 'A presença desta pessoa já foi registrada nesta atividade.'); feedback('warn'); return;
+        resultado('warn', 'JÁ REGISTRADO', insc.nome, 'A presença desta pessoa já foi registrada nesta atividade. ' + ident(insc)); feedback('warn'); return;
       }
       var at = S.atv[S.atividadeId];
       var sit = (S.ia[S.atividadeId] || {})[insc.id];
@@ -192,7 +194,7 @@
       }
       item.atividadeId = S.atividadeId; item.forcar = !!opcoes.forcar; item.efeito = { t: 'pres', key: k2 };
       S.pres[k2] = true; S.ultimo = item;
-      resultado('entrada', 'PRESENÇA REGISTRADA', insc.nome, hora() + (opcoes.forcar ? ' — registrada sem inscrição' : ''));
+      resultado('entrada', 'PRESENÇA REGISTRADA', insc.nome, hora() + (opcoes.forcar ? ' — registrada sem inscrição' : '') + ' — ' + ident(insc));
       feedback('entrada');
     }
     item.localMs = Math.round(performance.now() - t0);

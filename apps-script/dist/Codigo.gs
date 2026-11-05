@@ -1357,7 +1357,7 @@ function inscPorId_(id) {
 function adminHandle_(p) {
   var chk = checkPin_(p.pin, 'PIN_ADMIN', 'ADMIN');
   if (chk !== 'OK') return { ok: false, auth: true, code: chk, mensagem: MSG_PIN_ADMIN[chk] };
-  var escrita = /^admin_(editar|cancelar|reativar|reenviar|novo|inscrever|vaga|atividade_set|set_inscricoes|reprocessar)/.test(p.action);
+  var escrita = /^admin_(editar|cancelar|reativar|reenviar|novo|inscrever|vaga|backup|set_pin|atividade_set|set_inscricoes|reprocessar)/.test(p.action);
   if (escrita && !String(p.operador || '').trim()) return { ok: false, code: 'OPERADOR', mensagem: 'Informe o seu nome no login para registrar as alterações.' };
   switch (p.action) {
     case 'admin_login':
@@ -1379,6 +1379,10 @@ function adminHandle_(p) {
     case 'admin_alertas': return adminAlertas_();
     case 'admin_reprocessar': return adminReprocessar_(p);
     case 'admin_tabela': return adminTabela_(p);
+    case 'admin_log': return adminLogLista_(p);
+    case 'admin_duplicados': return adminDuplicados_();
+    case 'admin_backup': return adminBackup_(p);
+    case 'admin_set_pin': return adminSetPin_(p);
     default: return { ok: false, mensagem: 'Ação desconhecida.' };
   }
 }
@@ -1572,6 +1576,52 @@ function adminSetInscricoes_(p) {
   resetConfigCache_();
   adminLog_(p, 'set_inscricoes', v);
   return { ok: true, inscricoesAbertas: v === 'ABERTAS' };
+}
+
+/** Histórico das alterações feitas pelo painel (quem, quando, o quê): os 200 mais recentes. */
+function adminLogLista_() {
+  var itens = readAll_(SHEETS.LOG).filter(function (l) { return /^admin_/.test(String(l.evento)); }).slice(-200).reverse().map(function (l) {
+    return { data_hora: l.data_hora, evento: String(l.evento).replace(/^admin_/, ''), detalhe: l.detalhe };
+  });
+  return { ok: true, itens: itens };
+}
+
+/** Possíveis duplicidades entre inscrições ativas: mesmo nome (sem acento/maiúsculas) com matrículas diferentes, ou mesmo e-mail. */
+function adminDuplicados_() {
+  var ativos = readAll_(SHEETS.INSC).filter(function (i) { return i.status === 'ATIVA'; });
+  function agrupar(chaveDe, tipo) {
+    var g = {};
+    ativos.forEach(function (i) { var k = chaveDe(i); if (k) (g[k] = g[k] || []).push(i); });
+    return Object.keys(g).filter(function (k) { return g[k].length > 1; }).map(function (k) {
+      return { tipo: tipo, chave: k, inscritos: g[k].map(function (i) { return { id: i.id, nome: i.nome, matricula: i.matricula, email: i.email, curso: i.curso, periodo: i.periodo }; }) };
+    });
+  }
+  var grupos = agrupar(function (i) { return semAcento_(i.nome).replace(/\s+/g, ' ').trim(); }, 'NOME')
+    .concat(agrupar(function (i) { return String(i.email || '').trim().toLowerCase(); }, 'EMAIL'));
+  return { ok: true, grupos: grupos };
+}
+
+/** Cópia de segurança sob demanda (a planilha inteira, na conta dona do sistema). */
+function adminBackup_(p) {
+  var url = criarBackup_();
+  adminLog_(p, 'backup', 'cópia criada');
+  return { ok: true, url: url };
+}
+
+/** Troca o PIN do scanner (ex.: aparelho perdido): quem estiver com o PIN antigo perde o acesso. O PIN nunca é registrado no log. */
+function adminSetPin_(p) {
+  var novo = String(p.novoPin === undefined || p.novoPin === null ? '' : p.novoPin).trim();
+  var cfg = getConfig_();
+  if (novo.length < 4 || novo.length > 20) return { ok: false, code: 'PIN_INVALIDO', mensagem: 'O novo PIN deve ter de 4 a 20 caracteres.' };
+  if (novo === String(cfg.PIN_ADMIN || '')) return { ok: false, code: 'PIN_INVALIDO', mensagem: 'O PIN do scanner deve ser diferente da senha do administrador.' };
+  var linha = readAll_(SHEETS.CONFIG).filter(function (r) { return String(r.chave).trim() === 'PIN'; })[0];
+  if (!linha) return { ok: false, mensagem: 'Chave PIN não encontrada na aba Config.' };
+  updateRow_(SHEETS.CONFIG, linha._row, { valor: novo });
+  resetConfigCache_();
+  var props = PropertiesService.getScriptProperties();
+  ['PIN_BLOQ_ATE', 'PIN_FALHAS', 'PIN_FALHAS_DESDE'].forEach(function (k) { props.setProperty(k, '0'); });
+  adminLog_(p, 'set_pin_scanner', 'PIN do scanner trocado');
+  return { ok: true };
 }
 
 function adminAlertas_() {

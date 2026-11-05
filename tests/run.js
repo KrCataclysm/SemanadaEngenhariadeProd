@@ -543,5 +543,34 @@ test('admin: gerar novo QR invalida o anterior (scanner, página do participante
   e.adm('admin_cancelar_inscrito', { id }); assert.strictEqual(e.adm('admin_novo_qr', { id }).ok, false);
 });
 
+console.log('Controle do administrador');
+test('admin: registro de alterações lista só ações do painel (quem/quando/o quê), mais recentes primeiro', () => {
+  const e = admin(); const id = e.insc(1).id;
+  e.adm('admin_editar', { id, campos: { periodo: '6º' }, operador: 'Lilian' }); e.adm('admin_novo_qr', { id, operador: 'Rayan' });
+  const l = e.adm('admin_log'); assert(l.ok && l.itens.length >= 2);
+  assert.strictEqual(l.itens[0].evento, 'novo_qr'); assert(/Rayan/.test(l.itens[0].detalhe)); assert(l.itens.every(x => !/^(scan_lote|inscricao_)/.test(x.evento)));
+  assert(!JSON.stringify(l).includes(e.token(1)), 'nenhum token no registro');
+});
+test('admin: possíveis duplicados (mesmo nome sem acento/maiúsculas com matrículas diferentes, ou mesmo e-mail) e ignora cancelados', () => {
+  const e = admin();
+  e.reg(10, { nome: 'João da Silva' }); e.reg(11, { nome: 'JOAO DA SILVA' }); e.reg(12, { nome: 'Outra Pessoa Qualquer', email: 'dup@exemplo.com' }); e.reg(13, { nome: 'Mais Uma Pessoa Distinta', email: 'dup@exemplo.com' });
+  const g = e.adm('admin_duplicados').grupos;
+  assert(g.some(x => x.tipo === 'NOME' && x.inscritos.length === 2) && g.some(x => x.tipo === 'EMAIL' && x.chave === 'dup@exemplo.com'));
+  assert(!g.some(x => x.inscritos.some(i => /Pessoa Teste/.test(i.nome))), 'inscritos sem repetição não aparecem');
+  e.adm('admin_cancelar_inscrito', { id: e.insc(11).id }); assert(!e.adm('admin_duplicados').grupos.some(x => x.tipo === 'NOME'), 'cancelado não conta');
+});
+test('admin: cópia de segurança sob demanda e troca do PIN do scanner (regras, desbloqueio e log sem o PIN)', () => {
+  const e = admin(); e.setCfg('PIN', '4321');
+  const b = e.adm('admin_backup'); assert(b.ok && /^https:\/\/exemplo\/Backup/.test(b.url));
+  assert.strictEqual(e.adm('admin_set_pin', { novoPin: '12' }).code, 'PIN_INVALIDO');
+  assert.strictEqual(e.adm('admin_set_pin', { novoPin: 'senhaForte123' }).code, 'PIN_INVALIDO');
+  assert.strictEqual(e.adm('admin_set_pin', { novoPin: '9999', operador: '' }).code, 'OPERADOR');
+  for (let i = 0; i < 8; i++) e.ctx.scanLista_({ pin: 'errado' }); assert.strictEqual(e.ctx.scanLista_({ pin: '4321' }).code, 'BLOQUEADO');
+  assert.strictEqual(e.adm('admin_set_pin', { novoPin: '9999' }).ok, true);
+  assert.strictEqual(e.ctx.scanLista_({ pin: '4321' }).code, 'INVALIDO', 'PIN antigo perde o acesso'); assert.strictEqual(e.ctx.scanLista_({ pin: '9999' }).ok, true, 'novo PIN funciona e o bloqueio foi zerado');
+  const log = JSON.stringify(e.ctx.readAll_('Log')); assert(!log.includes('9999') && !log.includes('4321'), 'PIN fora do log');
+  assert(e.adm('admin_log').itens.some(x => x.evento === 'set_pin_scanner'));
+});
+
 console.log(`\n${passed} ok, ${failed} falharam`);
 process.exit(failed ? 1 : 0);

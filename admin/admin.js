@@ -2,7 +2,7 @@
   'use strict';
   var $ = function (id) { return document.getElementById(id); };
   var S = { pin: '', operador: '', logado: false, ativs: [], aba: 'inicio', lista: null };
-  var ABAS = ['inicio', 'inscritos', 'atividades', 'alertas', 'dados'];
+  var ABAS = ['inicio', 'inscritos', 'atividades', 'alertas', 'registro', 'dados'];
 
   // ---------- utilitários de interface (sempre textContent: nada de HTML vindo do servidor) ----------
   function plana(l) { return l.reduce(function (acc, x) { return acc.concat(Array.isArray(x) ? plana(x) : [x]); }, []); }
@@ -91,7 +91,7 @@
       $('p-' + a).classList.toggle('oculto', a !== aba);
     });
     if (aba === 'inicio') carregarInicio(dadosIniciais); else if (aba === 'atividades') carregarAtividades();
-    else if (aba === 'alertas') carregarAlertas(); else if (aba === 'dados') montarDados();
+    else if (aba === 'alertas') carregarAlertas(); else if (aba === 'registro') carregarRegistro(); else if (aba === 'dados') montarDados();
     else carregarLista();
   }
 
@@ -122,6 +122,18 @@
         kpi(r.alertasNovos, 'alertas não lidos', r.alertasNovos > 0), kpi(r.cotaEmailRestante === null ? '—' : r.cotaEmailRestante, 'e-mails restantes hoje')]));
       raiz.appendChild(h('div', { class: 'form-grid' }, [tabelaContagem('Por curso', r.porCurso), tabelaContagem('Por período', r.porPeriodo)]));
       raiz.appendChild(h('p', { class: 'contato', text: 'Versão do sistema: ' + r.versao }));
+      chamar('admin_duplicados').then(function (d) {
+        if (!d.ok || !d.grupos.length) return;
+        var card = h('div', { class: 'card' }, [h('h2', { text: 'Atenção: possíveis duplicidades (' + d.grupos.length + ')' }),
+          h('p', { class: 'contato', text: 'Pessoas com o mesmo nome ou o mesmo e-mail. Podem ser homônimos (confira a matrícula) ou um cadastro repetido; se for repetido, cancele um deles na ficha.' })]);
+        d.grupos.forEach(function (g) {
+          card.appendChild(h('div', { class: 'item' }, [h('strong', { text: g.tipo === 'NOME' ? 'Mesmo nome' : 'Mesmo e-mail: ' + g.chave })].concat(g.inscritos.map(function (i) {
+            return h('div', { class: 'linha' }, [h('div', { class: 'grow sub', text: i.nome + ' · mat. ' + i.matricula + ' · ' + i.curso + ' · ' + i.periodo + ' · ' + i.email }),
+              h('button', { type: 'button', class: 'sec peq', text: 'Abrir ficha', onclick: function () { irPara('inscritos'); abrirFicha(i.id); } })]);
+          }))));
+        });
+        raiz.appendChild(card);
+      });
     });
   }
 
@@ -143,7 +155,8 @@
     if (q) lista = lista.filter(function (i) { return norm(i.nome).indexOf(q) >= 0 || norm(i.matricula).indexOf(q) >= 0 || norm(i.email).indexOf(q) >= 0; });
     $('contaLista').textContent = lista.length + (q ? ' de ' + (S.lista || []).length : '') + ' inscrito(s), ordenados por período';
     if (!lista.length) { box.appendChild(h('p', { text: q ? 'Nenhum inscrito encontrado.' : 'Ainda não há inscritos.' })); return; }
-    var atual = null;
+    var atual = null, cont = {};
+    (S.lista || []).forEach(function (x) { if (x.status === 'ATIVA') cont[norm(x.nome).replace(/\s+/g, ' ')] = (cont[norm(x.nome).replace(/\s+/g, ' ')] || 0) + 1; });
     lista.forEach(function (i) {
       if (i.periodo !== atual) {
         atual = i.periodo;
@@ -152,7 +165,7 @@
       }
       box.appendChild(h('div', { class: 'item linha' }, [
         h('div', { class: 'grow' }, [h('strong', { text: i.nome }), h('div', { class: 'sub', text: 'Matrícula ' + i.matricula + ' · ' + i.curso + ' · ' + i.email })]),
-        i.status === 'ATIVA' ? null : statusBadge(i.status), h('button', { type: 'button', class: 'sec peq', text: 'Abrir ficha', onclick: function () { abrirFicha(i.id); } })]));
+        i.status === 'ATIVA' ? (cont[norm(i.nome).replace(/\s+/g, ' ')] > 1 ? badge('Nome repetido', 'fila') : null) : statusBadge(i.status), h('button', { type: 'button', class: 'sec peq', text: 'Abrir ficha', onclick: function () { abrirFicha(i.id); } })]));
     });
   }
   function campo(id, rotulo, valor, tipo) {
@@ -274,6 +287,22 @@
     });
   }
 
+  // ---------- Registro (histórico de alterações) ----------
+  var EVENTOS = { editar: 'Dados editados', cancelar_inscrito: 'Inscrição cancelada', reativar_inscrito: 'Inscrição reativada', reenviar_qr: 'QR reenviado', novo_qr: 'Novo QR Code gerado',
+    inscrever: 'Inscrito em atividade', vaga_cancelar: 'Vaga cancelada', atividade_set: 'Atividade alterada', set_inscricoes: 'Inscrições abertas/fechadas', reprocessar: 'E-mails reenviados',
+    backup: 'Cópia de segurança', set_pin_scanner: 'PIN do scanner trocado' };
+  function carregarRegistro() {
+    var raiz = limpar($('p-registro'));
+    chamar('admin_log').then(function (r) {
+      if (!ok(r)) return;
+      raiz.appendChild(h('div', { class: 'card' }, [h('h2', { text: 'Registro de alterações (' + r.itens.length + ' mais recentes)' }),
+        h('p', { class: 'contato', text: 'Quem fez o quê e quando. Fica gravado na aba Log da planilha e não aparece nenhum dado sensível (nem senhas, nem QR Codes).' }),
+        r.itens.length ? h('table', { class: 'tabela-simples' }, [h('thead', {}, h('tr', {}, ['Quando', 'Ação', 'Detalhe'].map(function (t) { return h('th', { text: t }); }))),
+          h('tbody', {}, r.itens.map(function (l) { return h('tr', {}, [l.data_hora, EVENTOS[l.evento] || l.evento, l.detalhe].map(function (t) { return h('td', { text: String(t) }); })); }))])
+          : h('p', { text: 'Nenhuma alteração registrada ainda.' })]));
+    });
+  }
+
   // ---------- Dados (exportação) ----------
   var TABELAS = [['base', 'Base de análise (uma linha por inscrito)'], ['inscritos', 'Inscritos'], ['atividades_inscricoes', 'Inscrições em atividades (com fila)'],
     ['portaria', 'Portaria (entradas e saídas)'], ['presenca', 'Presença em atividades'], ['permanencia', 'Permanência por dia'], ['certificados', 'Horas para certificados']];
@@ -285,6 +314,21 @@
         return h('div', { class: 'item linha' }, [h('span', { class: 'grow', text: t[1] }), h('button', { type: 'button', class: 'sec peq', text: 'Baixar CSV', onclick: function () {
           chamar('admin_tabela', { nome: t[0] }).then(function (r) { if (ok(r)) { baixar(t[0] + '-' + hojeStr() + '.csv', csv(r.headers, r.rows)); avisar('ok', r.rows.length + ' linha(s) exportada(s).'); } }); } })]);
       }))));
+    // Cópia de segurança sob demanda
+    raiz.appendChild(h('div', { class: 'card' }, [h('h2', { text: 'Cópia de segurança' }),
+      h('p', { class: 'contato', text: 'O sistema já faz uma cópia da planilha todos os dias. Use este botão para criar outra agora (por exemplo, antes de uma alteração grande). A cópia fica no Google Drive da conta dona da planilha.' }),
+      h('button', { type: 'button', class: 'sec', id: 'btnBackup', text: 'Criar cópia agora', onclick: function () {
+        chamar('admin_backup').then(function (r) { if (ok(r, 'Cópia criada no Google Drive da conta dona da planilha.')) { var a = $('linkBackup'); a.href = r.url; a.classList.remove('oculto'); } }); } }),
+      h('p', {}, [h('a', { id: 'linkBackup', class: 'oculto', href: '#', target: '_blank', rel: 'noopener noreferrer', text: 'Abrir a cópia criada' })])]));
+    // PIN do scanner
+    raiz.appendChild(h('div', { class: 'card' }, [h('h2', { text: 'PIN do scanner' }),
+      h('p', { class: 'contato', text: 'Troque o PIN se um aparelho foi perdido ou emprestado: quem estiver com o PIN antigo perde o acesso ao scanner. Informe o novo PIN à equipe da portaria.' }),
+      h('label', { for: 'novoPin', text: 'Novo PIN do scanner (de 4 a 20 caracteres)' }), h('input', { id: 'novoPin', type: 'password', autocomplete: 'off', maxlength: 20 }),
+      h('button', { type: 'button', class: 'perigo', id: 'btnTrocarPin', text: 'Trocar PIN do scanner', onclick: function () {
+        var v = $('novoPin').value;
+        if (String(v).trim().length < 4) { avisar('erro', 'O novo PIN deve ter de 4 a 20 caracteres.'); return; }
+        confirmar('Trocar o PIN do scanner? Todos os aparelhos que estão usando o PIN antigo precisarão entrar de novo com o novo PIN.').then(function (sim) {
+          if (sim) chamar('admin_set_pin', { novoPin: v }).then(function (r) { if (ok(r, 'PIN do scanner trocado. Informe o novo PIN à equipe.')) $('novoPin').value = ''; }); }); } })]));
   }
 
   // ---------- aplicativo instalável (PWA) ----------
