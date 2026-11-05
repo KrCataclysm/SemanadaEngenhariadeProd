@@ -49,6 +49,7 @@ test('inscrição válida cria registro, envia e-mail com QR inline e mede o tem
   const m = e.sent[0];
   assert.strictEqual(m.subject, 'Semana de Engenharia de Produção — Sua inscrição está confirmada');
   assert(m.htmlBody.includes('cid:qr') && m.inlineImages.qr.bytes.length > 100);
+  assert(m.attachments && m.attachments.length === 1 && /^QRCode-.*\.gif$/.test(m.attachments[0].name) && m.attachments[0].bytes.length > 100, 'QR também em anexo');
   assert(m.htmlBody.includes('Semana de Engenharia de Produção') && m.htmlBody.includes('caeproufpi'));
   assert(m.htmlBody.includes('atividades.html?t=' + r.token));
   assert(e.tabela('Log').some(l => l.evento === 'email_enviado'));

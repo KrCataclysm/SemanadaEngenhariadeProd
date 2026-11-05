@@ -2,7 +2,7 @@
    Guarda só a "casca" do aplicativo (páginas, scripts, estilos, fontes e ícones) para abrir rápido e sem internet.
    NUNCA guarda dados de inscritos: as chamadas ao sistema (Apps Script) são de outro domínio e não passam por aqui.
    Ao mudar a lista de arquivos abaixo, aumente a VERSAO. */
-const VERSAO = 'admin-v1';
+const VERSAO = 'admin-v2';
 const ARQUIVOS = [
   './', 'index.html', 'admin.js', 'manifest.webmanifest', '../inscricao/comum.js', '../inscricao/config.js',
   '../assets/css/style.css', '../assets/logo-evento.svg', '../assets/logo-caepro.png',

@@ -99,6 +99,7 @@ function buildEmail_(insc, tipo, atividade) {
     '<p style="margin:22px 0 6px;font-weight:700;color:' + COR.azul + '">Instruções</p>' +
     '<ul style="margin:0;padding-left:20px;line-height:1.5">' +
     '<li>Apresente este QR Code na entrada e na saída em cada dia do evento.</li>' +
+    '<li>Se a imagem do QR Code não aparecer, toque em \u201cAbrir meu QR Code\u201d ou abra o arquivo anexo (QRCode-Semana-Engenharia-Producao.gif); ele também pode ser salvo na galeria.</li>' +
     '<li>Mantenha o brilho do celular no máximo ou leve o QR Code impresso.</li>' +
     '<li>O QR Code é pessoal e intransferível.</li></ul>' +
     '<p style="margin:24px 0 0;font-size:13px;color:' + COR.cinza + ';line-height:1.5">' + esc_(CONTATO_TXT) + '</p>' +
@@ -112,11 +113,14 @@ function buildEmail_(insc, tipo, atividade) {
 
 function enviarEmail_(insc, tipo, atividade) {
   var e = buildEmail_(insc, tipo, atividade);
+  var qr = qrBlob_(String(insc.token));
   MailApp.sendEmail({
     to: insc.email, subject: e.assunto, body: e.texto, htmlBody: e.html,
     name: getConfig_().NOME_EVENTO || 'Semana de Engenharia de Produção',
     replyTo: getConfig_().EMAIL_CAEPRO || '',
-    inlineImages: { qr: qrBlob_(String(insc.token)), logo: logoBlob_() }
+    inlineImages: { qr: qr, logo: logoBlob_() },
+    // O QR também segue como arquivo anexo: aparece mesmo quando o aplicativo de e-mail bloqueia imagens do corpo da mensagem.
+    attachments: [qr.copyBlob().setName('QRCode-Semana-Engenharia-Producao.gif')]
   });
 }
 
