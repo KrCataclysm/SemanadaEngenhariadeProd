@@ -77,7 +77,7 @@ let ok = 0; const t = async (nome, fn) => { try { await fn(); ok++; console.log(
     const tardio = env.ctx.register_({ nome: 'Retardatario Silva Souza', curso: 'EP', periodo: '2º', matricula: '20250099', email: 'r@exemplo.com' });
     await pg.evaluate(tk => window.__scanner.processar(tk, { manual: true }), tardio.token);
     await pg.waitForFunction(() => /ENTRADA/.test(document.getElementById('res').textContent), null, { timeout: 8000 });
-    assert(/Retardatario/.test(await pg.textContent('#res'))); await c.close();
+    assert(/Retardatario/.test(await pg.textContent('#res'))); assert(/Mat\. 20250099/.test(await pg.textContent('#res')), 'matrícula para conferir o documento'); await c.close();
   });
   await t('scanner: o aparelho guarda só hashes (nenhum QR válido) e "Sair e limpar" apaga lista, fila e PIN', async () => {
     const [c, pg] = await novo(); await pg.goto(B + '/scanner/'); await pg.fill('#operador', 'Ana'); await pg.fill('#pin', '4321'); await pg.click('#btnLogin');

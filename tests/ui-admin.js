@@ -105,6 +105,24 @@ let ok = 0; const t = async (nome, fn) => { try { await fn(); ok++; console.log(
     const depois = env.ctx.readAll_('Inscritos').find(x => x.matricula === '20249992').token; assert(depois !== antes);
     assert.strictEqual(env.ctx.getMe_({ token: antes }).code, 'TOKEN');
   });
+  await t('início: aviso de possíveis duplicidades; lista marca "Nome repetido"', async () => {
+    env.ctx.register_({ nome: 'Ana Segundo Lima', curso: 'Engenharia de Produção', periodo: '4º', matricula: '20249994', email: 'a2@exemplo.com' });   // homônimo (matrícula diferente)
+    await aba('inicio'); await pg.waitForSelector('text=possíveis duplicidades'); assert(/Mesmo nome/.test(await pg.textContent('#p-inicio')));
+    await aba('inscritos'); await pg.fill('#q', ''); await pg.waitForFunction(() => document.querySelectorAll('#resBusca .badge').length > 0 && /Nome repetido/.test(document.getElementById('resBusca').textContent));
+  });
+  await t('registro: mostra quem fez o quê (sem tokens nem senhas)', async () => {
+    await aba('registro'); await pg.waitForSelector('#p-registro table'); const txt = await pg.textContent('#p-registro');
+    assert(/Novo QR Code gerado/.test(txt) && /Rayan|Lilian/.test(txt)); assert(!/senhaForte123/.test(txt));
+  });
+  await t('dados: cópia de segurança sob demanda e troca do PIN do scanner (com confirmação e regras)', async () => {
+    await aba('dados'); await pg.click('#btnBackup'); await pg.waitForFunction(() => /Cópia criada/.test(document.getElementById('toast').textContent)); assert((await pg.getAttribute('#linkBackup', 'href')).startsWith('https://exemplo/Backup'));
+    await pg.fill('#novoPin', '12'); await pg.click('#btnTrocarPin'); await pg.waitForFunction(() => /de 4 a 20/.test(document.getElementById('toast').textContent));
+    await pg.fill('#novoPin', '9876'); await pg.click('#btnTrocarPin'); await pg.waitForSelector('#dlg[open]'); await pg.click('#dlg button[value=nao]');
+    assert.strictEqual(env.ctx.getConfig_().PIN, '4321', 'cancelar não troca');
+    await pg.click('#btnTrocarPin'); await pg.waitForSelector('#dlg[open]'); await pg.click('#dlg button[value=sim]');
+    await pg.waitForFunction(() => /PIN do scanner trocado/.test(document.getElementById('toast').textContent)); env.ctx.resetConfigCache_(); assert.strictEqual(env.ctx.getConfig_().PIN, '9876');
+    assert.strictEqual(await pg.inputValue('#novoPin'), '');
+  });
   await t('sair encerra a sessão e volta ao login', async () => {
     await pg.click('#btnSair'); await pg.waitForSelector('#login:not(.oculto)'); assert.strictEqual(await pg.evaluate(() => sessionStorage.getItem('adm')), null);
   });

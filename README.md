@@ -7,7 +7,7 @@ Custo zero: **Google Sheets** (banco e painel do organizador) + **Google Apps Sc
 | Pasta | Conteúdo |
 |---|---|
 | `index.html`, `inscricao/` | Páginas públicas: inscrição no evento, escolha de atividades (link pessoal) e privacidade |
-| `admin/` | Painel de administração (senha própria): inscritos, atividades, vagas, alertas e exportação (instalável como aplicativo, PWA) |
+| `admin/` | Painel de administração (senha própria): inscritos, atividades, vagas, alertas e exportação, registro de alterações, novo QR e PIN do scanner (instalável como aplicativo, PWA) |
 | `scanner/` | Aplicativo da equipe (instalável, funciona offline): leitura de QR, portaria e presença em atividades |
 | `apps-script/` | Backend (`*.gs`) e `dist/Codigo.gs`, arquivo único para colar no editor do Apps Script |
 | `assets/` | CSS, fontes hospedadas no próprio site, logos e ícones |

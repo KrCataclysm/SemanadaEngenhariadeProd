@@ -9,7 +9,7 @@ const lista = [
   ['iPad Mini', devices['iPad Mini']], ['iPad Mini horizontal', devices['iPad Mini landscape']], ['iPad Pro 11', devices['iPad Pro 11']], ['iPad Pro 11 horizontal', devices['iPad Pro 11 landscape']],
   ['Celular horizontal', devices['Pixel 7 landscape']], ['Notebook 1366', { viewport: { width: 1366, height: 768 } }], ['Desktop 1920', { viewport: { width: 1920, height: 1080 } }], ['Ultrawide 3440', { viewport: { width: 3440, height: 1440 } }]
 ];
-const telas = ['inicio', 'inscritos', 'atividades', 'alertas', 'dados'];
+const telas = ['inicio', 'inscritos', 'atividades', 'alertas', 'registro', 'dados'];
 (async () => {
   await S.listen(); const br = await chromium.launch(); const problemas = []; const add = (t, m) => problemas.push(`${t}: ${m}`);
   for (const [nome, cfg] of lista) {
@@ -46,6 +46,8 @@ const telas = ['inicio', 'inscritos', 'atividades', 'alertas', 'dados'];
       if (tela === 'inscritos') { await pg.fill('#q', 'pessoa teste'); await pg.waitForSelector('#resBusca .item'); await medir('inscritos (busca)', false); await pg.click('#resBusca .item button'); await pg.waitForSelector('#formFicha'); await medir('inscritos (ficha)', true); continue; }
       if (tela === 'atividades') await pg.waitForSelector('#max-A16');
       if (tela === 'alertas') await pg.waitForSelector('text=Reenviar pendentes agora');
+      if (tela === 'registro') await pg.waitForSelector('#p-registro .card');
+      if (tela === 'dados') await pg.waitForSelector('#btnTrocarPin');
       await medir(tela, true);
     }
     // texto 200%: o rem muda e o layout precisa se reorganizar sem estourar

@@ -92,3 +92,30 @@ O painel (`/admin/`) é instalável em qualquer aparelho; só a "casca" (telas, 
 - Atalhos (toque longo no ícone, Android/desktop): Buscar inscritos, Atividades e vagas, Alertas.
 - Quando houver nova versão, aparece o aviso "Atualizar agora".
 - Testes: `npm run test:ui` (inclui `ui-pwa.js`, instalabilidade, e `ui-dispositivos.js`, 14 aparelhos).
+
+## 8. Como cada inscrito é identificado e protegido
+
+| Camada | O que é | Para quê |
+|---|---|---|
+| **ID** (`I0001`…) | Número sequencial interno | Liga inscrições, presenças e e-mails na planilha |
+| **Matrícula** | Única por pessoa (não aceita repetição) | Identidade acadêmica; é o que a equipe confere no documento |
+| **Token do QR** | 32 caracteres aleatórios (128 bits) | É o que está no QR Code; nunca aparece no painel, em exportações ou no log |
+| **Hash do token** | SHA-256 do token | É o que o **scanner guarda**: o aparelho não tem nenhum QR válido |
+| **Nome / curso** | Dados informados | Aparecem no scanner junto com a matrícula, para conferir homônimos |
+
+- **QR perdido, compartilhado ou fotografado por outra pessoa:** no painel, ficha do inscrito → **Gerar novo QR Code**. O anterior deixa de valer em todos os lugares e o novo é enviado por e-mail.
+- **Homônimos e cadastros repetidos:** o painel avisa no Início (mesmo nome ou mesmo e-mail) e marca "Nome repetido" na lista; a matrícula diferencia as pessoas.
+- **Aparelho perdido ou emprestado:** painel → Dados → **Trocar PIN do scanner** (o PIN antigo perde o acesso) e, no scanner, **Sair e limpar este aparelho**.
+- **Quem alterou o quê:** painel → **Registro** (também na aba `Log` da planilha). Senhas e QR Codes nunca entram no registro.
+
+## 9. Atualizações automáticas (ninguém vê versão antiga)
+
+- O site (GitHub Pages) e o sistema (Apps Script) são publicados sozinhos a cada mudança aprovada.
+- Painel, scanner e a tela do QR do participante buscam sempre a versão mais nova quando há internet (e usam a cópia guardada quando não há).
+- Aparelhos com o aplicativo aberto verificam novas versões ao abrir, a cada 5 minutos e ao voltar para o aplicativo. Na tela de login recarregam sozinhos; com o painel ou o scanner em uso aparece "Atualizar agora" (nunca interrompe uma leitura em andamento).
+
+## 10. QR Code do participante
+
+- Ao abrir o link do e-mail (ou ao se inscrever), o QR Code fica **guardado no aparelho**: dá para abri-lo depois pelo atalho "Meu QR" (instalável) **mesmo sem internet**.
+- O botão **Ampliar QR Code** mostra o QR grande sobre fundo branco e mantém a tela acesa.
+- O token sai do endereço do navegador assim que a página abre.
