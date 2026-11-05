@@ -1,4 +1,5 @@
 (function () {
+  App.registrarSw();   // páginas do participante: abrem sem internet e se atualizam sozinhas
   var $ = function (id) { return document.getElementById(id); };
   var form = $('form'), msg = $('msg'), btn = $('enviar'), carregadoEm = Date.now();
 
@@ -75,6 +76,7 @@
       $('formCard').classList.add('oculto');
       $('sucesso').classList.remove('oculto');
       $('msgSucesso').textContent = r.mensagem;
+      App.Meu.salvar(r.token, r.nome);   // o QR fica guardado neste aparelho (abre também sem internet)
       var png = App.qrDataUrl(r.token);
       $('qrImg').src = png; $('qrBaixar').href = png;
       var base = location.href.replace(/index\.html.*$/, '').replace(/[?#].*$/, '');

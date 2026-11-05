@@ -9,14 +9,15 @@ set('INSCRICOES', 'ABERTAS'); set('PIN', '4321');
 const ativ = (id, c) => { const a = env.ctx.getAtividade_(id); env.ctx.updateRow_('Atividades', a._row, c); };
 ativ('A16', { inscricoes_abertas: 'SIM', vagas_max: 5 });
 const base = env.ctx.register_({ nome: 'Maria da Silva Souza', curso: 'EP', periodo: '5º', matricula: '20240001', email: 'maria@exemplo.com' });
-let ocupadoUmaVez = false, chamadas = 0;
-const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.svg': 'image/svg+xml', '.woff2': 'font/woff2' };
+let ocupadoUmaVez = false, chamadas = 0, ativoRevogado = false;
+const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.webmanifest': 'application/manifest+json' };
 const srv = http.createServer((req, res) => {
   const u = new URL(req.url, B);
   if (u.pathname === '/api') {
     let b = ''; req.on('data', d => b += d); req.on('end', () => {
       res.writeHead(200, { 'Content-Type': 'application/json' }); chamadas++;
       const p = req.method === 'POST' ? JSON.parse(b) : Object.fromEntries(u.searchParams);
+      if (ativoRevogado && p.action === 'me') return res.end(JSON.stringify({ ok: false, code: 'TOKEN', mensagem: 'x' }));
       if (ocupadoUmaVez && p.action === 'register') { ocupadoUmaVez = false; return res.end(JSON.stringify({ ok: false, code: 'OCUPADO', mensagem: 'ocupado' })); }
       res.end(JSON.stringify(env.ctx.handleSeguro_(p)));
     }); return;
@@ -84,11 +85,27 @@ let ok = 0; const t = async (nome, fn) => { try { await fn(); ok++; console.log(
     await pg.evaluate(() => window.__scanner.processar('0'.repeat(32), { manual: true }));
     await pg.waitForFunction(() => /NÃO RECONHECIDO/.test(document.getElementById('res').textContent), null, { timeout: 8000 }); await c.close();
   });
-  await t('página do QR (botão do e-mail): mostra o QR do token, permite baixar e recusa link inválido', async () => {
+  await t('página do QR (botão do e-mail): mostra o QR, tira o token do endereço, guarda no aparelho e recusa link inválido', async () => {
     const [c, pg] = await novo(); await pg.goto(B + '/inscricao/qr.html?t=' + base.token); await pg.waitForSelector('#ok:not(.oculto)');
     assert(/^data:image\/gif/.test(await pg.getAttribute('#qrImg', 'src'))); assert(/^data:image\/gif/.test(await pg.getAttribute('#qrBaixar', 'href')));
-    assert(/atividades\.html\?t=[a-f0-9]{32}$/.test(await pg.getAttribute('#btnAtividades', 'href')));
-    await pg.goto(B + '/inscricao/qr.html?t=lixo'); await pg.waitForSelector('#invalido:not(.oculto)'); assert(!(await pg.isVisible('#ok'))); await c.close();
+    assert.strictEqual(new URL(pg.url()).search, '', 'token fora do endereço'); assert.strictEqual(await pg.getAttribute('#btnAtividades', 'href'), 'atividades.html');
+    await pg.waitForFunction(() => /Maria da Silva Souza/.test(document.getElementById('quem').textContent));   // nome confirmado pelo sistema
+    assert.strictEqual(await pg.evaluate(() => JSON.parse(localStorage.getItem('meuQr')).t), base.token);
+    await pg.goto(B + '/inscricao/qr.html'); await pg.waitForSelector('#ok:not(.oculto)');   // reabre sem o link: usa o QR guardado
+    await pg.goto(B + '/inscricao/atividades.html'); await pg.waitForFunction(() => /Olá, Maria/.test(document.getElementById('saudacao').textContent));   // atividades também usam o token guardado
+    const [c2, p2] = await novo(); await p2.goto(B + '/inscricao/qr.html?t=lixo'); await p2.waitForSelector('#invalido:not(.oculto)'); assert(!(await p2.isVisible('#ok')));
+    assert.strictEqual(await p2.evaluate(() => localStorage.getItem('meuQr')), null, 'token inválido não é guardado'); await c2.close(); await c.close();
+  });
+  await t('QR: modo ampliado abre/fecha, abre sem internet e QR substituído/cancelado vira aviso', async () => {
+    const [c, pg] = await novo(); await pg.goto(B + '/inscricao/qr.html?t=' + base.token); await pg.waitForSelector('#ok:not(.oculto)');
+    await pg.evaluate(() => navigator.serviceWorker.ready); await pg.reload(); await pg.waitForFunction(() => !!navigator.serviceWorker.controller);
+    await pg.waitForFunction(async () => !!(await caches.match('/inscricao/qr.html')));
+    await pg.click('#btnAmpliar'); await pg.waitForSelector('#dlgQr[open]'); const big = await pg.$eval('#qrGrande', e => e.getBoundingClientRect().width); assert(big >= 300, 'QR ampliado grande (' + big + ')');
+    await pg.click('#btnFecharQr'); await pg.waitForSelector('#dlgQr:not([open])', { state: 'attached' });
+    await c.setOffline(true); await pg.goto(B + '/inscricao/qr.html'); await pg.waitForSelector('#ok:not(.oculto)'); await pg.waitForSelector('#chRede:not(.oculto)');
+    ativoRevogado = true; await c.setOffline(false);   // ao voltar a internet, o sistema informa que o QR foi substituído/cancelado
+    await pg.waitForSelector('#revogado:not(.oculto)'); assert.strictEqual(await pg.evaluate(() => localStorage.getItem('meuQr')), null); ativoRevogado = false;
+    await c.close();
   });
   await br.close(); srv.close(); console.log(`\n${ok} fluxo(s) ok`);
 })();

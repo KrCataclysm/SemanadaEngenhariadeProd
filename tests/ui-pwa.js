@@ -7,7 +7,7 @@ let ok = 0; const t = async (n, fn) => { try { await fn(); ok++; console.log('  
   await S.listen();
   const br = await chromium.launch(); const ctx = await br.newContext({ viewport: { width: 420, height: 800 } }); const pg = await ctx.newPage(); pg.setDefaultTimeout(8000); const pgPrincipal = pg;
   const erros = []; pg.on('pageerror', e => erros.push(String(e))); pg.on('console', m => m.type() === 'error' && erros.push(m.text()));
-  const prontoAdmin = async (pg = pgPrincipal) => { await pg.waitForFunction(() => !!navigator.serviceWorker.controller); await pg.waitForFunction(async () => { const k = await caches.keys(); return k.includes('admin-v2') && !!(await (await caches.open('admin-v2')).match('/assets/icons/admin-192.png')); }); };
+  const prontoAdmin = async (pg = pgPrincipal) => { await pg.waitForFunction(() => !!navigator.serviceWorker.controller); await pg.waitForFunction(async () => { const k = await caches.keys(); return k.includes('admin-v3') && !!(await (await caches.open('admin-v3')).match('/assets/icons/admin-192.png')); }); };
   const man = JSON.parse(fs.readFileSync(path.join(S.root, 'admin/manifest.webmanifest'), 'utf8'));
   await t('manifesto do painel completo (standalone, escopo, ícones existentes e maskable)', async () => {
     assert.strictEqual(man.display, 'standalone'); assert(man.name && man.short_name.length <= 12); assert.strictEqual(man.scope, './'); assert(man.start_url && man.theme_color && man.background_color);
@@ -15,7 +15,7 @@ let ok = 0; const t = async (n, fn) => { try { await fn(); ok++; console.log('  
     assert(man.icons.some(i => i.sizes === '192x192') && man.icons.some(i => i.sizes === '512x512' && i.purpose === 'any') && man.icons.some(i => i.purpose === 'maskable'));
     for (const s of man.shortcuts) assert(/^\.\/\?aba=(inscritos|atividades|alertas)$/.test(s.url));
   });
-  for (const [nome, url] of [['painel', '/admin/'], ['scanner', '/scanner/']]) {
+  for (const [nome, url] of [['painel', '/admin/'], ['scanner', '/scanner/'], ['QR do participante', '/inscricao/qr.html?t=0123456789abcdef0123456789abcdef']]) {
     await t('instalável pelo Chrome sem pendências: ' + nome, async () => {
       await pg.goto(S.B + url); await pg.evaluate(() => navigator.serviceWorker.ready);
       await pg.reload(); await pg.waitForFunction(() => !!navigator.serviceWorker.controller);
@@ -36,6 +36,22 @@ let ok = 0; const t = async (n, fn) => { try { await fn(); ok++; console.log('  
     await p3.fill('#operador', 'Lilian'); await p3.fill('#senha', 'senhaForte123'); await p3.click('#btnLogin');
     await p3.waitForFunction(() => /sem conexão/i.test(document.getElementById('toast').textContent)); await c3.setOffline(false);
     await p3.reload(); await p3.waitForSelector('#chRede.oculto', { state: 'attached' }); await c3.close();
+  });
+  await t('atualização forçada: nova versão do serviço recarrega sozinha o login e, com o painel em uso, só avisa', async () => {
+    const c4 = await br.newContext({ viewport: { width: 420, height: 800 } }); const p4 = await c4.newPage(); p4.setDefaultTimeout(8000);
+    await p4.goto(S.B + '/admin/'); await prontoAdmin(p4);
+    const lancar = v => { S.estado.swAdmin = v; };
+    // 1) no login: recarrega sozinho
+    await p4.evaluate(() => { window.__marca = 1; }); lancar('admin-v8');
+    await p4.evaluate(() => navigator.serviceWorker.getRegistration().then(r => r.update()));
+    await p4.waitForFunction(() => window.__marca === undefined, null, { timeout: 8000 });
+    await prontoAdmin(p4);
+    // 2) logado: não recarrega, mostra o aviso
+    await p4.fill('#operador', 'Lilian'); await p4.fill('#senha', 'senhaForte123'); await p4.click('#btnLogin'); await p4.waitForSelector('#app:not(.oculto)');
+    await p4.evaluate(() => { window.__marca = 1; }); lancar('admin-v9');
+    await p4.evaluate(() => navigator.serviceWorker.getRegistration().then(r => r.update()));
+    await p4.waitForSelector('#avisoAtualiza:not(.oculto)'); assert.strictEqual(await p4.evaluate(() => window.__marca), 1, 'não recarregou com o painel em uso');
+    await c4.close();
   });
   await t('painel: atalho ?aba= abre a aba certa após o login', async () => {
     await pg.goto(S.B + '/admin/?aba=atividades'); await pg.fill('#operador', 'Lilian'); await pg.fill('#senha', 'senhaForte123'); await pg.click('#btnLogin');

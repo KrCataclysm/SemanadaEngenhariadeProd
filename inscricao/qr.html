@@ -9,9 +9,10 @@
 <meta name="color-scheme" content="light">
 <meta name="robots" content="noindex, nofollow">
 <title>Meu QR Code — Semana de Engenharia de Produção</title>
+<link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="../assets/logo-evento.svg" type="image/svg+xml">
 <link rel="icon" href="../assets/icons/favicon-32.png" sizes="32x32" type="image/png">
-<link rel="apple-touch-icon" href="../assets/icons/apple-touch-icon.png">
+<link rel="apple-touch-icon" href="../assets/icons/qr-apple-touch-icon.png">
 <link rel="preload" href="../assets/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="../assets/fonts/sora-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="../assets/css/style.css">
@@ -25,27 +26,45 @@
 </div></header>
 <noscript><div class="aviso erro">Para exibir o seu QR Code, ative o JavaScript no navegador.</div></noscript>
 <main id="conteudo">
+  <p id="chRede" class="aviso oculto" role="status">Sem conexão: seu QR Code continua disponível neste aparelho.</p>
   <section id="ok" class="card oculto">
     <h1>Seu QR Code de acesso</h1>
+    <p id="quem" class="quem oculto"></p>
     <div class="qr">
       <img id="qrImg" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" alt="QR Code pessoal de acesso ao evento" width="280" height="280">
-      <p><a id="qrBaixar" class="btn sec" href="#" download="qrcode-semana-eng-producao.gif">Baixar QR Code</a></p>
     </div>
+    <div class="linha-btns">
+      <button type="button" id="btnAmpliar">Ampliar QR Code</button>
+      <a id="qrBaixar" class="btn sec" href="#" download="qrcode-semana-eng-producao.gif">Baixar QR Code</a>
+      <button type="button" id="btnInstalar" class="sec oculto">Instalar atalho &ldquo;Meu QR&rdquo;</button>
+    </div>
+    <p id="dicaInstalar" class="aviso oculto">Para ter o atalho no iPhone ou iPad: toque em <strong>Compartilhar</strong> e depois em <strong>Adicionar à Tela de Início</strong>.</p>
+    <p class="sub">Este QR Code fica guardado neste aparelho: você pode abri-lo mesmo sem internet.</p>
     <h2>Como usar</h2>
     <ul>
       <li>Apresente este QR Code na entrada e na saída em cada dia do evento.</li>
-      <li>Mantenha o brilho do celular no máximo ou leve o QR Code impresso.</li>
+      <li>Toque em &ldquo;Ampliar QR Code&rdquo;: a tela fica clara e acesa para facilitar a leitura. Se puder, deixe o brilho no máximo.</li>
       <li>O QR Code é pessoal e intransferível: não o compartilhe.</li>
     </ul>
     <p><a id="btnAtividades" class="btn" href="#">Escolher atividades</a></p>
     <p class="contato" id="contato"></p>
   </section>
   <section id="invalido" class="card oculto">
-    <h1>Link inválido</h1>
-    <div class="aviso erro">Não foi possível exibir o QR Code, porque o link está incompleto ou incorreto. Utilize o link do e-mail de confirmação da sua inscrição. Em caso de dúvidas, entre em contato com a CAEPRO pelo Instagram (@caeproufpi) ou pelo e-mail caepro.ufpi1@gmail.com.</div>
+    <h1>Seu QR Code não está neste aparelho</h1>
+    <div class="aviso erro">Abra o link que enviamos para o seu e-mail na confirmação da inscrição (botão &ldquo;Abrir meu QR Code&rdquo;). Depois disso, o QR Code fica guardado neste aparelho. Em caso de dúvidas, entre em contato com a CAEPRO pelo Instagram (@caeproufpi) ou pelo e-mail caepro.ufpi1@gmail.com.</div>
   </section>
+  <section id="revogado" class="card oculto">
+    <h1>Este QR Code não é mais válido</h1>
+    <div class="aviso erro">A inscrição foi cancelada ou o QR Code foi substituído por um novo. Use o e-mail mais recente enviado pela organização ou fale com a CAEPRO pelo Instagram (@caeproufpi) ou pelo e-mail caepro.ufpi1@gmail.com.</div>
+  </section>
+  <dialog id="dlgQr" class="dlg-qr" aria-label="QR Code ampliado">
+    <img id="qrGrande" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" alt="QR Code pessoal de acesso ao evento, ampliado" width="600" height="600">
+    <button type="button" id="btnFecharQr">Fechar</button>
+  </dialog>
 </main>
+<script src="config.js"></script>
 <script src="vendor/qrcode.js"></script>
+<script src="comum.js"></script>
 <script src="qr.js"></script>
 </body>
 </html>

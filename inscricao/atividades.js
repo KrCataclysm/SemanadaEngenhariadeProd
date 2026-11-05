@@ -1,6 +1,7 @@
 (function () {
+  App.registrarSw();   // páginas do participante: abrem sem internet e se atualizam sozinhas
   var $ = function (id) { return document.getElementById(id); };
-  var token = (new URLSearchParams(location.search).get('t') || '').trim();
+  var token = App.Meu.token();
   var DIAS = { '2026-11-11': 'Quarta-feira, 11 de novembro', '2026-11-12': 'Quinta-feira, 12 de novembro', '2026-11-13': 'Sexta-feira, 13 de novembro' };
   $('contato').textContent = App.CONTATO;
 
