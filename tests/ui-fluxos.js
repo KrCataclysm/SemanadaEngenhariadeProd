@@ -36,6 +36,14 @@ let ok = 0; const t = async (nome, fn) => { try { await fn(); ok++; console.log(
     await pg.fill('#nome', 'Fulano de Tal ' + n); await pg.selectOption('#periodo', '4º'); await pg.fill('#matricula', '2025' + n);
     await pg.fill('#email', 'f' + n + '@exemplo.com'); await pg.fill('#email2', email2 === undefined ? 'f' + n + '@exemplo.com' : email2);
   };
+  await t('inscrição: com status "aberta" lembrado, o formulário aparece na hora e muda para o aviso se fecharem', async () => {
+    const [c, pg] = await novo(); await pg.goto(B + '/inscricao/'); await pg.waitForSelector('#formCard:not(.oculto)');   // 1ª visita: confirma e lembra
+    let fechar = false; await pg.route('**/api*', async r => { await new Promise(x => setTimeout(x, 1500)); if (fechar) { const p = JSON.parse(JSON.stringify({ ok: true, inscricoesAbertas: false, mensagemFechadas: 'Fechadas agora.' })); return r.fulfill({ contentType: 'application/json', body: JSON.stringify(p) }); } r.continue(); });
+    await pg.reload(); const t0 = Date.now(); await pg.waitForSelector('#formCard:not(.oculto)', { timeout: 1200 }); assert(Date.now() - t0 < 1200, 'formulário imediato');
+    fechar = true; await pg.reload(); await pg.waitForSelector('#formCard:not(.oculto)', { timeout: 1200 });
+    await pg.waitForSelector('#fechado:not(.oculto)'); assert(/Fechadas agora/.test(await pg.textContent('#msgFechado'))); assert(await pg.isHidden('#formCard'));
+    await c.close();
+  });
   await t('e-mails diferentes: bloqueia no navegador e marca o campo', async () => {
     const [c, pg] = await novo(); await pg.goto(B + '/inscricao/'); await preencher(pg, '0001', 'outro@exemplo.com');
     await pg.click('#enviar');

@@ -8,14 +8,16 @@
     "test:ui": "node tests/ui-audit.js && node tests/ui-fluxos.js && node tests/ui-admin.js && node tests/ui-pwa.js && node tests/ui-dispositivos.js && node tests/ui-email.js",
     "build": "node scripts/build-codigo.js",
     "check:dist": "node scripts/build-codigo.js && git diff --exit-code -- apps-script/dist/Codigo.gs",
-    "prepare:gas": "node scripts/prepare-gas.js"
+    "prepare:gas": "node scripts/prepare-gas.js",
+    "lint:html": "html-validate index.html 404.html admin/index.html scanner/index.html inscricao/*.html"
   },
   "engines": {
     "node": ">=20"
   },
   "devDependencies": {
+    "@google/clasp": "2.5.0",
     "axe-core": "4.10.0",
-    "playwright": "^1.50.0",
-    "@google/clasp": "2.5.0"
+    "html-validate": "^11.18.0",
+    "playwright": "^1.50.0"
   }
 }

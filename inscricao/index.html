@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
@@ -17,6 +17,8 @@
 <link rel="apple-touch-icon" href="../assets/icons/apple-touch-icon.png">
 <link rel="preload" href="../assets/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="../assets/fonts/sora-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preconnect" href="https://script.google.com">
+<link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
 <link rel="stylesheet" href="../assets/css/style.css">
 </head>
 <body>
@@ -40,7 +42,7 @@
     <div class="dots" aria-hidden="true"></div>
     <form id="form" novalidate>
       <label for="nome">Nome completo</label>
-      <input id="nome" name="nome" autocomplete="name" autocapitalize="words" maxlength="120" required aria-describedby="e-nome">
+      <input type="text" id="nome" name="nome" autocomplete="name" autocapitalize="words" maxlength="120" required aria-describedby="e-nome">
       <div class="erro-campo" id="e-nome" data-for="nome"></div>
 
       <label for="curso">Curso</label>
@@ -64,18 +66,18 @@
       <div class="erro-campo" id="e-periodo" data-for="periodo"></div>
 
       <label for="matricula">Matrícula</label>
-      <input id="matricula" name="matricula" inputmode="numeric" autocomplete="off" autocapitalize="characters" maxlength="20" required aria-describedby="e-matricula">
+      <input type="text" id="matricula" name="matricula" inputmode="numeric" autocomplete="off" autocapitalize="characters" maxlength="20" required aria-describedby="e-matricula">
       <div class="erro-campo" id="e-matricula" data-for="matricula"></div>
 
       <label for="email">E-mail (o QR Code será enviado para este endereço)</label>
-      <input id="email" name="email" type="email" inputmode="email" autocomplete="email" autocapitalize="none" spellcheck="false" maxlength="120" required aria-describedby="e-email">
+      <input id="email" name="email" type="email" inputmode="email" autocomplete="email" spellcheck="false" maxlength="120" required aria-describedby="e-email">
       <div class="erro-campo" id="e-email" data-for="email"></div>
 
       <label for="email2">Confirme o e-mail</label>
-      <input id="email2" name="email2" type="email" inputmode="email" autocomplete="off" autocapitalize="none" spellcheck="false" maxlength="120" required aria-describedby="e-email2">
+      <input id="email2" name="email2" type="email" inputmode="email" autocomplete="off" spellcheck="false" maxlength="120" required aria-describedby="e-email2">
       <div class="erro-campo" id="e-email2" data-for="email2"></div>
 
-      <div class="isca" aria-hidden="true"><label for="campo_extra">Não preencha este campo</label><input id="campo_extra" name="campo_extra" tabindex="-1" autocomplete="off"></div>
+      <div class="isca" aria-hidden="true"><label for="campo_extra">Não preencha este campo</label><input type="text" id="campo_extra" name="campo_extra" tabindex="-1" autocomplete="off"></div>
 
       <button id="enviar" class="form-btn" type="submit">Concluir inscrição</button>
     </form>
@@ -87,8 +89,8 @@
     <h1 id="tSucesso" tabindex="-1">Inscrição realizada</h1>
     <div id="msgSucesso" class="aviso ok" role="status"></div>
     <div class="qr">
-      <img id="qrImg" alt="QR Code pessoal de acesso ao evento" width="280" height="280">
-      <p><a id="qrBaixar" class="btn sec" download="qrcode-semana-eng-producao.gif">Baixar QR Code</a></p>
+      <img id="qrImg" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" alt="QR Code pessoal de acesso ao evento" width="280" height="280">
+      <p><a id="qrBaixar" class="btn sec" href="#" download="qrcode-semana-eng-producao.gif">Baixar QR Code</a></p>
     </div>
     <h2>Link pessoal para as atividades</h2>
     <p>Guarde este link. Quando as inscrições nas atividades forem abertas, ele permitirá que você escolha as atividades das quais deseja participar e consulte sua posição em filas de espera. O link é pessoal: não o compartilhe.</p>
