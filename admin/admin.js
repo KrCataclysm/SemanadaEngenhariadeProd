@@ -1,7 +1,7 @@
 (function () {
   'use strict';
   var $ = function (id) { return document.getElementById(id); };
-  var S = { pin: '', operador: '', logado: false, ativs: [], aba: 'inicio' };
+  var S = { pin: '', operador: '', logado: false, ativs: [], aba: 'inicio', lista: null };
   var ABAS = ['inicio', 'inscritos', 'atividades', 'alertas', 'dados'];
 
   // ---------- utilitários de interface (sempre textContent: nada de HTML vindo do servidor) ----------
@@ -36,6 +36,7 @@
   function chamar(acao, extra) {
     if (navigator.onLine === false) return Promise.resolve({ ok: false, code: 'REDE', mensagem: 'Você está sem conexão com a internet. As operações do painel só funcionam online; tente novamente quando a conexão voltar.' });
     return App.api(Object.assign({ action: acao, pin: S.pin, operador: S.operador }, extra || {})).then(function (r) {
+      if (r.ok && /^admin_(editar|cancelar_inscrito|reativar_inscrito|inscrever)$/.test(acao)) { S.lista = null; if (S.aba === 'inscritos') carregarLista(); }   // a lista reflete a alteração
       if (!r.ok && r.auth && S.logado) sair(r.mensagem);   // só falhas de autenticação encerram a sessão (erros de validação não)
       return r;
     });
@@ -91,7 +92,7 @@
     });
     if (aba === 'inicio') carregarInicio(dadosIniciais); else if (aba === 'atividades') carregarAtividades();
     else if (aba === 'alertas') carregarAlertas(); else if (aba === 'dados') montarDados();
-    else $('q').focus();
+    else carregarLista();
   }
 
   // ---------- Início ----------
@@ -126,19 +127,32 @@
 
   // ---------- Inscritos ----------
   var tBusca = null;
-  function buscar() {
-    var q = $('q').value.trim(), box = limpar($('resBusca'));
-    if (q.length < 2) { return; }
-    chamar('admin_buscar', { q: q }).then(function (r) {
+  function norm(t) { return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); }
+  function numPeriodo(p) { var m = /\d+/.exec(String(p || '')); return m ? Number(m[0]) : 999; }
+  function porPeriodo(a, b) { return numPeriodo(a.periodo) - numPeriodo(b.periodo) || String(a.periodo).localeCompare(String(b.periodo), 'pt-BR') || String(a.nome).localeCompare(String(b.nome), 'pt-BR'); }
+  /** Carrega todos os inscritos (cerca de 200) uma vez; a busca filtra a lista na hora, sem novas chamadas. */
+  function carregarLista() {
+    var box = $('resBusca'); if (!S.lista) box.textContent = 'Carregando inscritos…';
+    return chamar('admin_lista').then(function (r) {
       if (!ok(r)) return;
-      limpar(box);
-      if (!r.resultados.length) { box.appendChild(h('p', { text: 'Nenhum inscrito encontrado.' })); return; }
-      if (r.total > r.resultados.length) box.appendChild(h('p', { class: 'contato', text: 'Mostrando ' + r.resultados.length + ' de ' + r.total + ' resultados. Refine a busca.' }));
-      r.resultados.forEach(function (i) {
-        box.appendChild(h('div', { class: 'item linha' }, [
-          h('div', { class: 'grow' }, [h('strong', { text: i.nome }), h('div', { class: 'sub', text: 'Matrícula ' + i.matricula + ' · ' + i.curso + ' · ' + i.periodo + ' · ' + i.email })]),
-          statusBadge(i.status), h('button', { type: 'button', class: 'sec peq', text: 'Abrir ficha', onclick: function () { abrirFicha(i.id); } })]));
-      });
+      S.lista = r.inscritos.slice().sort(porPeriodo); mostrarLista();
+    });
+  }
+  function mostrarLista() {
+    var box = limpar($('resBusca')), q = norm($('q').value.trim()), lista = S.lista || [];
+    if (q) lista = lista.filter(function (i) { return norm(i.nome).indexOf(q) >= 0 || norm(i.matricula).indexOf(q) >= 0 || norm(i.email).indexOf(q) >= 0; });
+    $('contaLista').textContent = lista.length + (q ? ' de ' + (S.lista || []).length : '') + ' inscrito(s), ordenados por período';
+    if (!lista.length) { box.appendChild(h('p', { text: q ? 'Nenhum inscrito encontrado.' : 'Ainda não há inscritos.' })); return; }
+    var atual = null;
+    lista.forEach(function (i) {
+      if (i.periodo !== atual) {
+        atual = i.periodo;
+        var n = lista.filter(function (x) { return x.periodo === atual; }).length;
+        box.appendChild(h('h2', { class: 'grupo', text: (atual || 'Sem período') + ' — ' + n }));
+      }
+      box.appendChild(h('div', { class: 'item linha' }, [
+        h('div', { class: 'grow' }, [h('strong', { text: i.nome }), h('div', { class: 'sub', text: 'Matrícula ' + i.matricula + ' · ' + i.curso + ' · ' + i.email })]),
+        i.status === 'ATIVA' ? null : statusBadge(i.status), h('button', { type: 'button', class: 'sec peq', text: 'Abrir ficha', onclick: function () { abrirFicha(i.id); } })]));
     });
   }
   function campo(id, rotulo, valor, tipo) {
@@ -198,7 +212,7 @@
     document.querySelectorAll('#formFicha .erro-campo').forEach(function (e) { e.textContent = ''; });
     document.querySelectorAll('#formFicha [aria-invalid]').forEach(function (e) { e.removeAttribute('aria-invalid'); });
     chamar('admin_editar', { id: id, campos: { nome: $('f-nome').value, curso: $('f-curso').value, periodo: $('f-periodo').value, matricula: $('f-matricula').value, email: $('f-email').value } }).then(function (r) {
-      if (r.ok) { avisar('ok', r.semMudancas ? 'Nenhuma alteração a salvar.' : 'Dados salvos.' + (r.emailReenviado ? ' O QR foi reenviado ao novo e-mail.' : '')); if (!r.semMudancas) { abrirFicha(id); buscar(); } return; }
+      if (r.ok) { avisar('ok', r.semMudancas ? 'Nenhuma alteração a salvar.' : 'Dados salvos.' + (r.emailReenviado ? ' O QR foi reenviado ao novo e-mail.' : '')); if (!r.semMudancas) { abrirFicha(id); } return; }
       if (r.erros) Object.keys(r.erros).forEach(function (k) { var e = $('e-f-' + k); if (e) e.textContent = r.erros[k]; var inp = $('f-' + k); if (inp) inp.setAttribute('aria-invalid', 'true'); });
       avisar('erro', r.mensagem);
     });
@@ -300,7 +314,7 @@
   $('formLogin').addEventListener('submit', entrar);
   $('btnSair').addEventListener('click', function () { sair(); });
   ABAS.forEach(function (a) { $('t-' + a).addEventListener('click', function () { irPara(a); }); });
-  $('q').addEventListener('input', function () { clearTimeout(tBusca); tBusca = setTimeout(buscar, 350); });
+  $('q').addEventListener('input', function () { clearTimeout(tBusca); tBusca = setTimeout(mostrarLista, 120); });
   try {
     var salvo = JSON.parse(sessionStorage.getItem('adm') || 'null');
     if (salvo && salvo.p && salvo.o) { S.pin = salvo.p; S.operador = salvo.o; S.logado = true; chamar('admin_resumo').then(function (r) { if (r.ok) mostrarApp(r); else sair(); }); }

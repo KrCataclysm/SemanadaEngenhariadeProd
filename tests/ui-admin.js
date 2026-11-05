@@ -82,6 +82,18 @@ let ok = 0; const t = async (nome, fn) => { try { await fn(); ok++; console.log(
     const txt = fs.readFileSync(await dl.path(), 'utf8');
     assert(!/token/.test(txt.split('\r\n')[0])); assert(!txt.includes(pessoas[0].token)); assert(txt.includes("\"'=HYPERLINK") || txt.includes("'=HYPERLINK"));
   });
+  await t('inscritos: lista direta ordenada por período (agrupada) e filtro instantâneo', async () => {
+    env.ctx.register_({ nome: 'Zeca Formado Silva', curso: 'Engenharia de Produção', periodo: 'Formado', matricula: '20249991', email: 'z@exemplo.com' });
+    env.ctx.register_({ nome: 'Ana Segundo Lima', curso: 'Engenharia de Produção', periodo: '2º', matricula: '20249992', email: 'a@exemplo.com' });
+    env.ctx.register_({ nome: 'Bia Décimo Souza', curso: 'Engenharia de Produção', periodo: '10º', matricula: '20249993', email: 'b@exemplo.com' });
+    await aba('inicio'); await aba('inscritos'); await pg.fill('#q', ''); await pg.waitForSelector('#resBusca .item');
+    const grupos = await pg.$$eval('#resBusca h2.grupo', e => e.map(x => x.textContent.split(' — ')[0]));
+    assert.deepStrictEqual(grupos, ['2º', '5º', '10º', 'Formado'], grupos.join(','));
+    assert(/ordenados por período/.test(await pg.textContent('#contaLista')));
+    await pg.fill('#q', 'decimo'); await pg.waitForFunction(() => document.querySelectorAll('#resBusca .item').length === 1);
+    assert(/Bia Décimo/.test(await pg.textContent('#resBusca .item'))); await pg.fill('#q', '');
+    await pg.waitForFunction(() => document.querySelectorAll('#resBusca .item').length > 3);
+  });
   await t('sair encerra a sessão e volta ao login', async () => {
     await pg.click('#btnSair'); await pg.waitForSelector('#login:not(.oculto)'); assert.strictEqual(await pg.evaluate(() => sessionStorage.getItem('adm')), null);
   });

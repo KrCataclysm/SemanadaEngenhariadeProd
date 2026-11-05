@@ -29,6 +29,7 @@ function adminHandle_(p) {
     case 'admin_login':
     case 'admin_resumo': return adminResumo_();
     case 'admin_buscar': return adminBuscar_(p);
+    case 'admin_lista': return adminLista_(p);
     case 'admin_ficha': return adminFicha_(p);
     case 'admin_editar': return adminEditar_(p);
     case 'admin_cancelar_inscrito': return adminCancelarInscrito_(p);
@@ -70,6 +71,12 @@ function adminBuscar_(p) {
     return semAcento_(i.nome).indexOf(q) >= 0 || semAcento_(i.matricula).indexOf(q) >= 0 || semAcento_(i.email).indexOf(q) >= 0;
   });
   return { ok: true, total: achados.length, resultados: achados.slice(0, 30).map(pubInsc_) };
+}
+
+/** Lista completa de inscritos (campos públicos do painel, sem token) para a aba Inscritos. */
+function adminLista_(p) {
+  var todos = readAll_(SHEETS.INSC).map(pubInsc_);
+  return { ok: true, total: todos.length, inscritos: todos };
 }
 
 function adminFicha_(p) {

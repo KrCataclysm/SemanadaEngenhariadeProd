@@ -135,6 +135,7 @@ body.admin main, body.admin .topo .in { max-width: 72rem; }
 .linha { display: flex; gap: .75rem; align-items: center; flex-wrap: wrap; }
 .linha > .grow { flex: 1; min-width: 12rem; }
 .item { background: #fff; border-radius: var(--raio); padding: .875rem 1rem; margin-bottom: .5rem; box-shadow: 0 1px 3px rgba(15, 27, 45, .1); }
+h2.grupo { font-size: 1.05rem; margin: 1.25rem 0 .5rem; padding-bottom: .25rem; border-bottom: 2px solid var(--laranja); }
 .item .sub { font-size: .875rem; color: var(--texto-suave); overflow-wrap: anywhere; }
 .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 0 1rem; }
 button.perigo, .btn.perigo { background: #a8231b; } button.perigo:hover { background: #861912; }
