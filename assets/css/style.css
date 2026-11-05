@@ -149,3 +149,11 @@ button.peq { min-height: 2.75rem; padding: .5rem 1rem; }
 .tabela-simples th, .tabela-simples td { text-align: left; padding: .375rem .625rem; border-bottom: 1px solid #eee; overflow-wrap: break-word; min-width: 5.5rem; vertical-align: top; }
 .tabela-simples th { color: var(--azul); }
 .estreito { max-width: 28rem; } .mb { margin-bottom: .75rem; } .sem-topo { margin-top: 0; } .topo-1 { margin-top: 1rem; }
+
+/* Tela do QR Code (participante) */
+.quem { font-weight: 700; color: var(--azul); margin: 0 0 .5rem; overflow-wrap: anywhere; }
+.sub { font-size: .875rem; color: var(--texto-suave); }
+dialog.dlg-qr { padding: 1rem; border: 0; border-radius: 0; width: 100vw; max-width: none; height: 100dvh; max-height: none; margin: 0; background: #fff; box-shadow: none; }
+dialog.dlg-qr[open] { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.25rem; }
+dialog.dlg-qr img { width: min(92vw, 70dvh); height: auto; image-rendering: pixelated; background: #fff; }
+dialog.dlg-qr::backdrop { background: #fff; }

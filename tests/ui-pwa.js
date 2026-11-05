@@ -15,7 +15,7 @@ let ok = 0; const t = async (n, fn) => { try { await fn(); ok++; console.log('  
     assert(man.icons.some(i => i.sizes === '192x192') && man.icons.some(i => i.sizes === '512x512' && i.purpose === 'any') && man.icons.some(i => i.purpose === 'maskable'));
     for (const s of man.shortcuts) assert(/^\.\/\?aba=(inscritos|atividades|alertas)$/.test(s.url));
   });
-  for (const [nome, url] of [['painel', '/admin/'], ['scanner', '/scanner/']]) {
+  for (const [nome, url] of [['painel', '/admin/'], ['scanner', '/scanner/'], ['QR do participante', '/inscricao/qr.html?t=0123456789abcdef0123456789abcdef']]) {
     await t('instalável pelo Chrome sem pendências: ' + nome, async () => {
       await pg.goto(S.B + url); await pg.evaluate(() => navigator.serviceWorker.ready);
       await pg.reload(); await pg.waitForFunction(() => !!navigator.serviceWorker.controller);
