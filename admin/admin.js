@@ -171,6 +171,9 @@
           h('div', { class: 'linha topo-1' }, [
             h('button', { type: 'submit', text: 'Salvar alterações' }),
             ativa ? h('button', { type: 'button', class: 'sec', text: 'Reenviar QR por e-mail', onclick: function () { chamar('admin_reenviar_qr', { id: i.id }).then(function (x) { if (ok(x, 'QR reenviado para ' + $('f-email').value + '.')) abrirFicha(i.id); }); } }) : null,
+            ativa ? h('button', { type: 'button', class: 'sec', text: 'Gerar novo QR Code', onclick: function () {
+              confirmar('Gerar um novo QR Code para ' + i.nome + '? O QR Code atual deixará de valer (inclusive o que já está no celular da pessoa) e o novo será enviado por e-mail para ' + i.email + '.').then(function (s2) {
+                if (s2) chamar('admin_novo_qr', { id: i.id }).then(function (x) { if (ok(x, 'Novo QR Code gerado e enviado por e-mail. O anterior foi invalidado.')) abrirFicha(i.id); }); }); } }) : null,
             ativa ? h('button', { type: 'button', class: 'perigo', text: 'Cancelar inscrição no evento', onclick: function () {
               confirmar('Cancelar a inscrição de ' + i.nome + ' no evento e em todas as atividades? As vagas serão liberadas e a fila de espera avançará.').then(function (s) {
                 if (s) chamar('admin_cancelar_inscrito', { id: i.id }).then(function (x) { if (ok(x, 'Inscrição cancelada. Pessoas promovidas da fila: ' + x.promovidos + '.')) abrirFicha(i.id); });

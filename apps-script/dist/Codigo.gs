@@ -1056,6 +1056,12 @@ function checkPin_(pin, chave, prefixo) {
   return 'INVALIDO';
 }
 
+/** SHA-256 (hex) do token. O scanner guarda só este código: com ele não é possível fabricar um QR Code válido. */
+function hashToken_(t) {
+  var d = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, String(t), Utilities.Charset.UTF_8);
+  return d.map(function (b) { return ('0' + (b < 0 ? b + 256 : b).toString(16)).slice(-2); }).join('');
+}
+
 function pinFalha_(chk) { return { ok: false, code: chk, mensagem: MSG_PIN[chk] }; }
 
 /** Fotografia para o scanner trabalhar localmente (resposta instantânea). */
@@ -1063,9 +1069,9 @@ function scanLista_(p) {
   var chk = checkPin_(p.pin);
   if (chk !== 'OK') return pinFalha_(chk);
   var ativ = readAll_(SHEETS.ATIV);
-  var out = { ok: true, gerado: Date.now(), i: [], a: [], ia: {}, p: {}, pr: [] };
+  var out = { ok: true, v: 2, gerado: Date.now(), i: [], a: [], ia: {}, p: {}, pr: [] };
   readAll_(SHEETS.INSC).forEach(function (r) {
-    out.i.push([r.id, r.token, r.nome, r.matricula, r.curso, r.status]);
+    out.i.push([r.id, hashToken_(r.token), r.nome, r.matricula, r.curso, r.status]);
   });
   ativ.forEach(function (a) {
     out.a.push([a.id, dia_(a.dia), hm_(a.inicio), hm_(a.fim), a.titulo, a.tipo, String(a.exige_inscricao).toUpperCase() === 'SIM' ? 1 : 0]);
@@ -1098,8 +1104,8 @@ function scanLote_(p) {
   if (chk !== 'OK') return pinFalha_(chk);
   var itens = (p.itens || []).slice(0, 50);
   return withLock_(function () {
-    var porToken = {}, porId = {};
-    readAll_(SHEETS.INSC).forEach(function (r) { porToken[String(r.token)] = r; porId[r.id] = r; });
+    var porToken = {}, porHash = {};
+    readAll_(SHEETS.INSC).forEach(function (r) { porToken[String(r.token)] = r; porHash[hashToken_(r.token)] = r; });
     var ativ = {};
     readAll_(SHEETS.ATIV).forEach(function (a) { ativ[String(a.id)] = a; });
     var port = readAll_(SHEETS.PORTARIA), pres = readAll_(SHEETS.PRES);
@@ -1133,7 +1139,7 @@ function scanLote_(p) {
           return { clientId: cid, resultado: 'ANULADO' };
         }
         if (cid && clientes[cid]) return { clientId: cid, resultado: 'REGISTRADO', repetido: true };
-        var insc = porToken[String(it.token || '')];
+        var insc = it.h ? (/^[a-f0-9]{64}$/.test(String(it.h)) ? porHash[String(it.h)] : null) : porToken[String(it.token || '')];   // `token` só para versões antigas do scanner
         if (!insc) return { clientId: cid, resultado: 'TOKEN_INVALIDO' };
         if (insc.status !== 'ATIVA') return { clientId: cid, resultado: 'CANCELADA', nome: insc.nome };
         var ts = tsValido_(it.ts);
@@ -1351,7 +1357,7 @@ function inscPorId_(id) {
 function adminHandle_(p) {
   var chk = checkPin_(p.pin, 'PIN_ADMIN', 'ADMIN');
   if (chk !== 'OK') return { ok: false, auth: true, code: chk, mensagem: MSG_PIN_ADMIN[chk] };
-  var escrita = /^admin_(editar|cancelar|reativar|reenviar|inscrever|vaga|atividade_set|set_inscricoes|reprocessar)/.test(p.action);
+  var escrita = /^admin_(editar|cancelar|reativar|reenviar|novo|inscrever|vaga|atividade_set|set_inscricoes|reprocessar)/.test(p.action);
   if (escrita && !String(p.operador || '').trim()) return { ok: false, code: 'OPERADOR', mensagem: 'Informe o seu nome no login para registrar as alterações.' };
   switch (p.action) {
     case 'admin_login':
@@ -1363,6 +1369,7 @@ function adminHandle_(p) {
     case 'admin_cancelar_inscrito': return adminCancelarInscrito_(p);
     case 'admin_reativar_inscrito': return adminReativar_(p);
     case 'admin_reenviar_qr': return adminReenviarQr_(p);
+    case 'admin_novo_qr': return adminNovoQr_(p);
     case 'admin_inscrever': return adminInscrever_(p);
     case 'admin_vaga_cancelar': return adminCancelarVaga_(p);
     case 'admin_atividades': return adminAtividades_();
@@ -1482,6 +1489,21 @@ function adminReenviarQr_(p) {
     updateRow_(SHEETS.INSC, i._row, { status_email: 'PENDENTE' });
     enqueueEmail_(i.id, 'CONFIRMACAO');
     adminLog_(p, 'reenviar_qr', i.id + ' → ' + i.email);
+    return true;
+  });
+  if (!ok) return { ok: false, mensagem: 'Inscrito não encontrado ou cancelado.' };
+  try { processOutbox_(2, p.id); } catch (e) { /* gatilho */ }
+  return { ok: true };
+}
+
+/** Gera um novo QR Code (token) e invalida o anterior: use quando o QR for compartilhado, perdido ou fotografado por outra pessoa. */
+function adminNovoQr_(p) {
+  var ok = withLock_(function () {
+    var i = inscPorId_(p.id);
+    if (!i || i.status !== 'ATIVA') return false;
+    updateRow_(SHEETS.INSC, i._row, { token: novoToken_(), status_email: 'PENDENTE' });
+    enqueueEmail_(i.id, 'CONFIRMACAO');
+    adminLog_(p, 'novo_qr', i.id + ' (QR anterior invalidado)');
     return true;
   });
   if (!ok) return { ok: false, mensagem: 'Inscrito não encontrado ou cancelado.' };

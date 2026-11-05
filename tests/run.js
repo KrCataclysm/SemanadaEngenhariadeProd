@@ -514,5 +514,34 @@ test('e-mail: QR e logo embutidos, botão "Abrir meu QR Code" com o token e text
   assert(m.inlineImages.logo.type === 'image/png');
 });
 
+console.log('Tokens e scanner (hash)');
+test('scanner: a lista leva só o hash do token (nenhum QR válido no aparelho) e o lote aceita o hash', () => {
+  const e = scan(); const tk = e.token(1);
+  const l = e.ctx.scanLista_({ pin: '4321' }); const linha = l.i.find(x => x[0] === e.insc(1).id);
+  assert(l.v === 2 && /^[a-f0-9]{64}$/.test(linha[1]) && linha[1] !== tk, 'hash no lugar do token');
+  assert(!JSON.stringify(l).includes(tk), 'o token não aparece em lugar nenhum da lista');
+  assert.strictEqual(linha[1], require('crypto').createHash('sha256').update(tk).digest('hex'));
+  const ok = e.ctx.scanLote_({ pin: '4321', itens: [{ kind: 'scan', modo: 'PORTARIA', dia: '2026-11-11', h: linha[1], clientId: 'h1', operador: 'Ana', ts: Date.now() }] });
+  assert.strictEqual(ok.resultados[0].resultado, 'REGISTRADO');
+  const ruim = e.ctx.scanLote_({ pin: '4321', itens: [{ kind: 'scan', modo: 'PORTARIA', dia: '2026-11-11', h: 'a'.repeat(64), clientId: 'h2', operador: 'Ana' }, { kind: 'scan', modo: 'PORTARIA', dia: '2026-11-11', h: 'xyz', clientId: 'h3', operador: 'Ana' }] });
+  assert.deepStrictEqual(ruim.resultados.map(x => x.resultado), ['TOKEN_INVALIDO', 'TOKEN_INVALIDO']);
+  const velho = e.ctx.scanLote_({ pin: '4321', itens: [{ kind: 'scan', modo: 'PORTARIA', dia: '2026-11-12', token: tk, clientId: 'h4', operador: 'Ana' }] });   // versão antiga do scanner
+  assert.strictEqual(velho.resultados[0].resultado, 'REGISTRADO');
+});
+test('admin: gerar novo QR invalida o anterior (scanner, página do participante), reenvia o e-mail e registra no log', () => {
+  const e = admin(); e.setCfg('PIN', '4321'); const antigo = e.token(1), id = e.insc(1).id;
+  assert.strictEqual(e.adm('admin_novo_qr', { id, operador: '' }).code, 'OPERADOR');
+  assert.strictEqual(e.ctx.getMe_({ token: antigo }).ok, true);
+  const antes = e.emailsDe(1).length; const r = e.adm('admin_novo_qr', { id }); assert.strictEqual(r.ok, true);
+  const novo = e.token(1); assert(novo !== antigo && /^[a-f0-9]{32}$/.test(novo));
+  assert.strictEqual(e.ctx.getMe_({ token: antigo }).code, 'TOKEN'); assert.strictEqual(e.ctx.getMe_({ token: novo }).ok, true);
+  const lote = e.ctx.scanLote_({ pin: '4321', itens: [{ kind: 'scan', modo: 'PORTARIA', dia: '2026-11-11', token: antigo, clientId: 'n1', operador: 'A' }] });
+  assert.strictEqual(lote.resultados[0].resultado, 'TOKEN_INVALIDO');
+  assert(e.emailsDe(1).length > antes && e.emailsDe(1).slice(-1)[0].htmlBody.includes('qr.html?t=' + novo), 'e-mail novo com o QR novo');
+  assert(e.ctx.readAll_('Log').some(l => l.evento === 'admin_novo_qr' && /Admin Teste/.test(l.detalhe)));
+  assert(!JSON.stringify(e.adm('admin_ficha', { id })).includes(novo), 'token nunca vai para o painel');
+  e.adm('admin_cancelar_inscrito', { id }); assert.strictEqual(e.adm('admin_novo_qr', { id }).ok, false);
+});
+
 console.log(`\n${passed} ok, ${failed} falharam`);
 process.exit(failed ? 1 : 0);

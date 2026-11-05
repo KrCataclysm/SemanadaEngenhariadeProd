@@ -45,6 +45,8 @@ function makeEnv(opts = {}) {
         return f === 'yyyy-MM-dd' ? `${x.getFullYear()}-${p(x.getMonth() + 1)}-${p(x.getDate())}` :
           f === 'HH:mm' ? `${p(x.getHours())}:${p(x.getMinutes())}` :
           `${x.getFullYear()}-${p(x.getMonth() + 1)}-${p(x.getDate())} ${p(x.getHours())}:${p(x.getMinutes())}:${p(x.getSeconds())}`; },
+      computeDigest: (alg, s) => Array.from(require('crypto').createHash('sha256').update(String(s), 'utf8').digest()).map(b => (b > 127 ? b - 256 : b)),
+      DigestAlgorithm: { SHA_256: 'SHA_256' }, Charset: { UTF_8: 'UTF_8' },
       base64Decode: s => Array.from(Buffer.from(s, 'base64')),
       newBlob: (bytes, type, name) => { const b = { bytes, type, name, copyBlob() { return Object.assign({}, b); }, setName(n) { b.name = n; return b; } }; return b; }
     },

@@ -23,7 +23,7 @@ function inscPorId_(id) {
 function adminHandle_(p) {
   var chk = checkPin_(p.pin, 'PIN_ADMIN', 'ADMIN');
   if (chk !== 'OK') return { ok: false, auth: true, code: chk, mensagem: MSG_PIN_ADMIN[chk] };
-  var escrita = /^admin_(editar|cancelar|reativar|reenviar|inscrever|vaga|atividade_set|set_inscricoes|reprocessar)/.test(p.action);
+  var escrita = /^admin_(editar|cancelar|reativar|reenviar|novo|inscrever|vaga|atividade_set|set_inscricoes|reprocessar)/.test(p.action);
   if (escrita && !String(p.operador || '').trim()) return { ok: false, code: 'OPERADOR', mensagem: 'Informe o seu nome no login para registrar as alterações.' };
   switch (p.action) {
     case 'admin_login':
@@ -35,6 +35,7 @@ function adminHandle_(p) {
     case 'admin_cancelar_inscrito': return adminCancelarInscrito_(p);
     case 'admin_reativar_inscrito': return adminReativar_(p);
     case 'admin_reenviar_qr': return adminReenviarQr_(p);
+    case 'admin_novo_qr': return adminNovoQr_(p);
     case 'admin_inscrever': return adminInscrever_(p);
     case 'admin_vaga_cancelar': return adminCancelarVaga_(p);
     case 'admin_atividades': return adminAtividades_();
@@ -154,6 +155,21 @@ function adminReenviarQr_(p) {
     updateRow_(SHEETS.INSC, i._row, { status_email: 'PENDENTE' });
     enqueueEmail_(i.id, 'CONFIRMACAO');
     adminLog_(p, 'reenviar_qr', i.id + ' → ' + i.email);
+    return true;
+  });
+  if (!ok) return { ok: false, mensagem: 'Inscrito não encontrado ou cancelado.' };
+  try { processOutbox_(2, p.id); } catch (e) { /* gatilho */ }
+  return { ok: true };
+}
+
+/** Gera um novo QR Code (token) e invalida o anterior: use quando o QR for compartilhado, perdido ou fotografado por outra pessoa. */
+function adminNovoQr_(p) {
+  var ok = withLock_(function () {
+    var i = inscPorId_(p.id);
+    if (!i || i.status !== 'ATIVA') return false;
+    updateRow_(SHEETS.INSC, i._row, { token: novoToken_(), status_email: 'PENDENTE' });
+    enqueueEmail_(i.id, 'CONFIRMACAO');
+    adminLog_(p, 'novo_qr', i.id + ' (QR anterior invalidado)');
     return true;
   });
   if (!ok) return { ok: false, mensagem: 'Inscrito não encontrado ou cancelado.' };

@@ -94,6 +94,17 @@ let ok = 0; const t = async (nome, fn) => { try { await fn(); ok++; console.log(
     assert(/Bia Décimo/.test(await pg.textContent('#resBusca .item'))); await pg.fill('#q', '');
     await pg.waitForFunction(() => document.querySelectorAll('#resBusca .item').length > 3);
   });
+  await t('ficha: gerar novo QR Code (com confirmação) invalida o anterior', async () => {
+    await pg.fill('#q', 'ana segundo'); await pg.waitForFunction(() => document.querySelectorAll('#resBusca .item').length === 1);
+    const antes = env.ctx.readAll_('Inscritos').find(x => x.matricula === '20249992').token;
+    await pg.click('#resBusca .item button'); await pg.waitForSelector('#formFicha');
+    await pg.click('text=Gerar novo QR Code'); await pg.waitForSelector('#dlg[open]'); assert(/deixará de valer/.test(await pg.textContent('#dlgTxt')));
+    await pg.click('#dlg button[value=nao]'); assert.strictEqual(env.ctx.readAll_('Inscritos').find(x => x.matricula === '20249992').token, antes, 'cancelar não muda');
+    await pg.click('text=Gerar novo QR Code'); await pg.waitForSelector('#dlg[open]'); await pg.click('#dlg button[value=sim]');
+    await pg.waitForFunction(() => /Novo QR Code gerado/.test(document.getElementById('toast').textContent));
+    const depois = env.ctx.readAll_('Inscritos').find(x => x.matricula === '20249992').token; assert(depois !== antes);
+    assert.strictEqual(env.ctx.getMe_({ token: antes }).code, 'TOKEN');
+  });
   await t('sair encerra a sessão e volta ao login', async () => {
     await pg.click('#btnSair'); await pg.waitForSelector('#login:not(.oculto)'); assert.strictEqual(await pg.evaluate(() => sessionStorage.getItem('adm')), null);
   });
