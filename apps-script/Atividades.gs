@@ -82,7 +82,7 @@ function enrollCore_(inscrito, atividade) {
   var ocupadas = inscricoesDaAtividade_(atividade.id, 'CONFIRMADA').length;
   var id = nextId_('X', SHEETS.IA);
   if (max === null || ocupadas < max) {
-    appendObj_(SHEETS.IA, { id: id, inscrito_id: inscrito.id, atividade_id: atividade.id, data_hora: now_(), status: 'CONFIRMADA', posicao: '' });
+    appendObj_(SHEETS.IA, { id: id, inscrito_id: inscrito.id, nome: inscrito.nome, atividade_id: atividade.id, data_hora: now_(), status: 'CONFIRMADA', posicao: '' });
     enqueueEmail_(inscrito.id, 'ATIVIDADE', atividade.id);
     if (max !== null && ocupadas + 1 >= max) {
       alert_('VAGAS_ESGOTADAS', atividade.id, 'Vagas esgotadas em: ' + atividade.titulo + ' (' + max + ' vagas).');
@@ -90,7 +90,7 @@ function enrollCore_(inscrito, atividade) {
     return { ok: true, status: 'CONFIRMADA', atividadeId: atividade.id };
   }
   var posicao = inscricoesDaAtividade_(atividade.id, 'FILA').length + 1;
-  appendObj_(SHEETS.IA, { id: id, inscrito_id: inscrito.id, atividade_id: atividade.id, data_hora: now_(), status: 'FILA', posicao: posicao });
+  appendObj_(SHEETS.IA, { id: id, inscrito_id: inscrito.id, nome: inscrito.nome, atividade_id: atividade.id, data_hora: now_(), status: 'FILA', posicao: posicao });
   enqueueEmail_(inscrito.id, 'FILA', atividade.id);
   return { ok: true, status: 'FILA', posicao: posicao, atividadeId: atividade.id };
 }

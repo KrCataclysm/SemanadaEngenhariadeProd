@@ -576,6 +576,32 @@ test('portaria: leituras de dois aparelhos chegando fora de ordem recebem ENTRAD
   assert.deepStrictEqual(Array.from(e.tabela('Portaria').filter(x => x.status === 'VALIDO').map(x => x.tipo)), ['ENTRADA']);
 });
 
+console.log('Nome ao lado do código nas abas de movimento');
+test('portaria, presença, atividades, e-mails, permanência e certificados passam a gravar o NOME junto do código', () => {
+  const e = scan(); const t0 = Date.now(); const p1 = e.insc(1), p2 = e.insc(2);
+  e.lote([e.por(1, { ts: t0 }), e.por(2, { ts: t0 + 60000 }), e.por(1, { ts: t0 + 3600e3 })]);
+  e.ativ('A16', { vagas_max: 5, inscricoes_abertas: 'SIM' }); e.enroll(1, 'A16');
+  e.lote([{ kind: 'scan', modo: 'ATIVIDADE', atividadeId: 'A16', token: e.token(1), clientId: 'pa1', operador: 'Ana', ts: t0 }]);
+  e.ctx.recalcularPermanencia_();
+  const nomeDe = id => e.insc(Number(id.slice(1))).nome;
+  ['Portaria', 'Presenca_Atividades', 'Inscricoes_Atividades', 'Fila_Email', 'Permanencia', 'Certificados'].forEach(aba => {
+    const linhas = e.tabela(aba); assert(linhas.length > 0, aba + ' vazia');
+    linhas.forEach(r => { assert.strictEqual(r.nome, nomeDe(r.inscrito_id), `${aba}: nome ao lado de ${r.inscrito_id}`); });
+  });
+  assert.strictEqual(e.tabela('Portaria').filter(r => r.inscrito_id === p1.id).length, 2);
+});
+test('linhas antigas (sem nome) são completadas; trocar o nome do inscrito atualiza todas as abas; colunas técnicas são ocultadas uma vez', () => {
+  const e = scan(); const t0 = Date.now(); e.lote([e.por(1, { ts: t0 }), e.por(2, { ts: t0 + 1000 })]); e.enroll(1, 'A16');
+  // simula linhas gravadas por versão anterior (nome em branco)
+  e.tabela('Portaria').forEach(r => e.ctx.updateRow_('Portaria', r._row, { nome: '' })); e.tabela('Fila_Email').forEach(r => e.ctx.updateRow_('Fila_Email', r._row, { nome: '' }));
+  assert(e.tabela('Portaria').every(r => r.nome === ''));
+  e.ctx.preencherNomes_(false); assert(e.tabela('Portaria').every(r => r.nome === e.insc(Number(r.inscrito_id.slice(1))).nome) && e.tabela('Fila_Email').every(r => r.nome));
+  const id = e.insc(1).id; const adm = Object.assign(e, {}); e.setCfg('PIN_ADMIN', 'senhaForte123');
+  assert.strictEqual(e.ctx.handleSeguro_({ action: 'admin_editar', pin: 'senhaForte123', operador: 'Lilian', id, campos: { nome: 'Nome Novo Completo' } }).ok, true);
+  ['Portaria', 'Inscricoes_Atividades', 'Fila_Email'].forEach(aba => e.tabela(aba).filter(r => r.inscrito_id === id).forEach(r => assert.strictEqual(r.nome, 'Nome Novo Completo', aba)));
+  e.props.COLUNAS_OCULTAS_V1 = undefined; const antes = (e.sheets.Portaria.ocultas || []).length; e.ctx.ocultarColunasTecnicas_(); assert.strictEqual(e.sheets.Portaria.ocultas.length - antes, 4, '4 colunas técnicas'); e.ctx.ocultarColunasTecnicas_(); assert.strictEqual(e.sheets.Portaria.ocultas.length - antes, 4, 'só uma vez (não reaplica depois que você reexibir)');
+});
+
 console.log('Controle do administrador');
 test('admin: registro de alterações lista só ações do painel (quem/quando/o quê), mais recentes primeiro', () => {
   const e = admin(); const id = e.insc(1).id;

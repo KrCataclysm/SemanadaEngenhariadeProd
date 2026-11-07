@@ -137,7 +137,7 @@ function scanLote_(p) {
           if (!/^\d{4}-\d{2}-\d{2}$/.test(dia)) return { clientId: cid, resultado: 'DADOS_INVALIDOS' };
           var chave = insc.id + '|' + dia;
           var tipo = estado[chave] === 'ENTRADA' ? 'SAIDA' : 'ENTRADA';   // provisório: reordenar() ajusta pela ordem dos horários
-          var linha = { inscrito_id: insc.id, dia: dia, tipo: tipo, data_hora: fmtTs_(ts), operador: operador, status: 'VALIDO',
+          var linha = { inscrito_id: insc.id, nome: insc.nome, dia: dia, tipo: tipo, data_hora: fmtTs_(ts), operador: operador, status: 'VALIDO',
             client_id: cid, ts: ts, local_ms: Number(it.localMs) || '', server_ms: Date.now() - t0 };
           appendObj_(SHEETS.PORTARIA, linha);
           linha._row = sheet_(SHEETS.PORTARIA).getLastRow();
@@ -154,7 +154,7 @@ function scanLote_(p) {
           if (String(at.exige_inscricao).toUpperCase() === 'SIM' && sit !== 'CONFIRMADA' && !it.forcar) {
             return { clientId: cid, resultado: 'NAO_INSCRITO', nome: insc.nome, situacao: sit };
           }
-          var l2 = { inscrito_id: insc.id, atividade_id: at.id, data_hora: fmtTs_(ts), operador: operador, status: 'VALIDO',
+          var l2 = { inscrito_id: insc.id, nome: insc.nome, atividade_id: at.id, data_hora: fmtTs_(ts), operador: operador, status: 'VALIDO',
             client_id: cid, ts: ts, local_ms: Number(it.localMs) || '', server_ms: Date.now() - t0 };
           appendObj_(SHEETS.PRES, l2);
           l2._row = sheet_(SHEETS.PRES).getLastRow();
@@ -176,17 +176,18 @@ function scanLote_(p) {
 /** Soma pares ENTRADA→SAÍDA por pessoa/dia e gera Certificados. */
 function recalcularPermanencia_() {
   var grupos = calcularPermanencia_();
+  var nomes = {}; readAll_(SHEETS.INSC).forEach(function (r) { nomes[String(r.id)] = String(r.nome); });
   var perm = [], total = {}, pendPessoa = {}, pendentes = 0;
   Object.keys(grupos).sort().forEach(function (k) {
     var g = grupos[k];
     var m = Math.round(g.min * 10) / 10;
-    perm.push([g.insc, g.dia, m, g.pend ? 'SIM' : 'NAO']);
+    perm.push([g.insc, g.dia, m, g.pend ? 'SIM' : 'NAO', nomes[g.insc] || '']);
     total[g.insc] = (total[g.insc] || 0) + g.min;
     if (g.pend) { pendPessoa[g.insc] = (pendPessoa[g.insc] || 0) + 1; pendentes++; }
   });
   var cert = Object.keys(total).sort().map(function (id) {
     return [id, Math.round(total[id] / 60 * 100) / 100,
-      pendPessoa[id] ? 'Saída não registrada em ' + pendPessoa[id] + ' dia(s): conferir antes de emitir o certificado.' : ''];
+      pendPessoa[id] ? 'Saída não registrada em ' + pendPessoa[id] + ' dia(s): conferir antes de emitir o certificado.' : '', nomes[id] || ''];
   });
   substituirLinhas_(SHEETS.PERM, perm);
   substituirLinhas_(SHEETS.CERT, cert);
