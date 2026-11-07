@@ -8,6 +8,10 @@
   var png = App.qrDataUrl(t);
   $('qrImg').src = png; $('qrBaixar').href = png; $('qrGrande').src = png;
   $('btnAtividades').href = 'atividades.html';
+  // "Escolher atividades" só aparece quando há atividade aberta para inscrição (ou a pessoa já tem atividades); senão, vale o aviso do Instagram.
+  function ativ(sim) { $('boxAtiv').classList.toggle('oculto', !sim); $('novidades').classList.toggle('oculto', !!sim); }
+  var ATIV_CHAVE = 'meuQrAtiv';
+  try { ativ(localStorage.getItem(ATIV_CHAVE) === '1'); } catch (e) { ativ(false); }   // último estado conhecido (vale também sem internet)
   $('contato').textContent = App.CONTATO;
   function nome(n) { if (n) { $('quem').textContent = n; $('quem').classList.remove('oculto'); } }
   nome(salvo && salvo.t === t ? salvo.nome : '');
@@ -18,8 +22,13 @@
   function confirmar() {
     if (navigator.onLine === false) return;
     App.api({ action: 'me', token: t }).then(function (r) {
-      if (r && r.ok) { App.Meu.salvar(t, r.nome); nome(r.nome); return; }
-      if (r && r.code === 'TOKEN') { App.Meu.limpar(); mostrar('revogado'); }   // QR substituído ou inscrição cancelada
+      if (r && r.ok) {
+        App.Meu.salvar(t, r.nome); nome(r.nome);
+        var tem = (r.atividades || []).some(function (a) { return a.aberta || a.minha; });
+        ativ(tem); try { localStorage.setItem(ATIV_CHAVE, tem ? '1' : '0'); } catch (e) { /* sem armazenamento */ }
+        return;
+      }
+      if (r && r.code === 'TOKEN') { App.Meu.limpar(); try { localStorage.removeItem(ATIV_CHAVE); } catch (e) { /* ignora */ } mostrar('revogado'); }   // QR substituído ou inscrição cancelada
     });
   }
   confirmar();
