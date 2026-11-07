@@ -78,7 +78,7 @@ function buildEmail_(insc, tipo, atividade) {
   var mostrarAtiv = !!link && (temAbertas || lista.length > 0);
   var instagram = cfg.INSTAGRAM_CAEPRO || 'https://www.instagram.com/caeproufpi';
   var novidadesHtml = !mostrarAtiv
-    ? '<p style="margin:20px 0 0;line-height:1.5">Novidades em breve: acompanhe o Instagram da CAEPRO para mais informações: <a href="' + esc_(instagram) + '" style="color:' + COR.laranja + ';font-weight:700">@caeproufpi</a>.</p>'
+    ? '<p style="margin:22px 0 0;font-size:19px;line-height:1.4;font-weight:700">Novidades em breve: acompanhe o Instagram da CAEPRO para mais informações: <a href="' + esc_(instagram) + '" style="color:' + COR.laranja + ';font-weight:700">@caeproufpi</a>.</p>'
     : '';
   var botaoQr = linkQr
     ? '<p style="margin:14px 0 0;font-size:13px;color:' + COR.grafite + '">Se a imagem do QR Code não aparecer, abra-o pelo botão abaixo:</p>' +
