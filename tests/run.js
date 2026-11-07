@@ -52,6 +52,7 @@ test('inscrição válida cria registro, envia e-mail com QR inline e mede o tem
   assert(m.attachments && m.attachments.length === 1 && /^QRCode-.*\.gif$/.test(m.attachments[0].name) && m.attachments[0].bytes.length > 100, 'QR também em anexo');
   assert(m.htmlBody.includes('Semana de Engenharia de Produção') && m.htmlBody.includes('caeproufpi'));
   assert(!m.htmlBody.includes('atividades.html') && /Novidades em breve/.test(m.htmlBody) && m.htmlBody.includes('instagram.com/caeproufpi'), 'sem atividade aberta: sem botão de atividades, com aviso do Instagram');
+  assert(/<p[^>]*font-size:19px[^>]*font-weight:700[^>]*>Novidades em breve/.test(m.htmlBody), 'aviso do Instagram em destaque (maior e em negrito)');
   assert(m.htmlBody.includes('qr.html?t=' + r.token) && /Novidades em breve/.test(m.body));
   assert(e.tabela('Log').some(l => l.evento === 'email_enviado'));
   assert(r.mensagem.includes('pode demorar'));
