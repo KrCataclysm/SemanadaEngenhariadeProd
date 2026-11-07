@@ -73,6 +73,7 @@ var MSG = {
   invalido: 'Não foi possível concluir a inscrição, pois há dados ausentes ou inválidos. Revise os campos destacados e tente novamente.',
   cancelada: 'Esta matrícula possui uma inscrição cancelada. Para regularizar a situação, ' + 'entre em contato com a CAEPRO pelo Instagram (@caeproufpi) ou pelo e-mail caepro.ufpi1@gmail.com.',
   jaInscrito: 'Esta matrícula já possui inscrição na Semana de Engenharia de Produção. Reenviamos a confirmação, com o QR Code, para o e-mail cadastrado na inscrição original (%EMAIL%). O envio pode levar alguns minutos. ' + CONTATO_TXT,
+  jaInscritoLimite: 'Esta matrícula já possui inscrição na Semana de Engenharia de Produção. A confirmação, com o QR Code, já foi enviada ao e-mail cadastrado na inscrição original (%EMAIL%) e não será reenviada novamente por aqui. Verifique a caixa de entrada e a de spam. ' + CONTATO_TXT,
   sucesso: 'Sua inscrição na Semana de Engenharia de Produção foi realizada com sucesso. Seu QR Code está exibido abaixo: salve-o ou faça uma captura de tela, pois será necessário apresentá-lo na entrada e na saída de cada dia do evento. Enviamos também um e-mail de confirmação, que pode demorar alguns minutos para chegar. Caso o e-mail não chegue, verifique a caixa de spam e confira se o endereço informado está correto. ' + CONTATO_TXT,
   tokenInvalido: 'Não foi possível identificar sua inscrição. Utilize o link pessoal enviado no e-mail de confirmação. ' + CONTATO_TXT,
   atividadeFechada: 'As inscrições nesta atividade não estão abertas no momento.',
@@ -86,3 +87,4 @@ var MSG = {
 
 var PRIORIDADE_EMAIL = { CONFIRMACAO: 0, PROMOCAO: 1, FILA: 2, ATIVIDADE: 3 };
 var MAX_TENTATIVAS_EMAIL = 6;
+var MAX_CONFIRMACOES = 3;   // confirmação original + até 2 reenvios pedidos pelo formulário (o painel não tem esse limite)

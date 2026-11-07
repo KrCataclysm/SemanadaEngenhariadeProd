@@ -74,13 +74,14 @@ function register_(p) {
       alert_('DUPLICIDADE', d.matricula + '|' + hoje_(),
         'Tentativa de nova inscrição com matrícula já cadastrada: ' + d.matricula + ' (' + existente.nome + ').');
       if (existente.status !== 'ATIVA') return { ok: false, code: 'CANCELADA', mensagem: MSG.cancelada };
-      var recente = readAll_(SHEETS.OUTBOX).some(function (o) {
-        return o.inscrito_id === existente.id && o.tipo === 'CONFIRMACAO' && o.status === 'PENDENTE';
-      });
-      if (!recente) enqueueEmail_(existente.id, 'CONFIRMACAO');
+      // Reenvio da confirmação limitado (evita que alguém digite a matrícula de outra pessoa várias vezes e encha o e-mail dela / gaste a cota diária).
+      var envios = readAll_(SHEETS.OUTBOX).filter(function (o) { return o.inscrito_id === existente.id && o.tipo === 'CONFIRMACAO'; });
+      var pendente = envios.some(function (o) { return o.status === 'PENDENTE'; });
+      var limite = envios.length >= MAX_CONFIRMACOES;
+      if (!pendente && !limite) enqueueEmail_(existente.id, 'CONFIRMACAO');
       return {
         ok: true, status: 'JA_INSCRITO', inscritoId: existente.id,
-        mensagem: MSG.jaInscrito.replace('%EMAIL%', maskEmail_(existente.email))
+        mensagem: (limite ? MSG.jaInscritoLimite : MSG.jaInscrito).replace('%EMAIL%', maskEmail_(existente.email))
       };
     }
     var id = nextId_('I', SHEETS.INSC);
