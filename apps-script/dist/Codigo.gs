@@ -1566,7 +1566,9 @@ function adminAtividadeSet_(p) {
   function inteiro(v) { return v === '' || v === null ? '' : (/^\d{1,4}$/.test(String(v).trim()) ? parseInt(v, 10) : NaN); }
   if (c.vagas_max !== undefined) { var m = inteiro(c.vagas_max); if (isNaN(m)) return { ok: false, mensagem: 'Vagas máximas deve ser um número inteiro (ou vazio para sem limite).' }; mud.vagas_max = m; }
   if (c.vagas_min !== undefined) { var n = inteiro(c.vagas_min); if (isNaN(n)) return { ok: false, mensagem: 'Vagas mínimas deve ser um número inteiro (ou vazio).' }; mud.vagas_min = n; }
+  if (c.exige !== undefined) mud.exige_inscricao = c.exige ? 'SIM' : 'NAO';
   if (c.aberta !== undefined) mud.inscricoes_abertas = c.aberta ? 'SIM' : 'NAO';
+  if (c.aberta === true || c.aberta === 'true') mud.exige_inscricao = 'SIM';   // abrir a inscrição implica exigir inscrição (senão a atividade não apareceria para os participantes)
   Object.keys(mud).forEach(function (k) { if (String(a[k]) !== String(mud[k])) desc.push(k + ': "' + a[k] + '" → "' + mud[k] + '"'); });
   if (!desc.length) return { ok: true, semMudancas: true };
   updateRow_(SHEETS.ATIV, a._row, mud);

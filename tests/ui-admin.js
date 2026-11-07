@@ -67,6 +67,15 @@ let ok = 0; const t = async (nome, fn) => { try { await fn(); ok++; console.log(
     const [dl] = await Promise.all([pg.waitForEvent('download'), pg.click('.card:has(#max-A16) button:has-text("Baixar CSV")')]);
     const txt = fs.readFileSync(await dl.path(), 'utf8'); assert(txt.startsWith('﻿nome;matricula;email;situacao;posicao_fila;presenca')); assert(/CONFIRMADA/.test(txt));
   });
+  await t('atividades: as sem inscrição prévia ficam em seção recolhível e abrir uma delas marca "exige" automaticamente', async () => {
+    await aba('atividades'); await pg.waitForSelector('details.card summary'); assert(await pg.isHidden('#ab-A11'), 'recolhida');
+    await pg.click('details.card summary'); await pg.waitForSelector('#ab-A11'); assert.strictEqual(await pg.isChecked('#ex-A11'), false);
+    await pg.check('#ab-A11'); assert.strictEqual(await pg.isChecked('#ex-A11'), true, 'abrir marca exige');
+    await pg.click('div.card:has(#ab-A11) button:has-text("Salvar")'); await pg.waitForFunction(() => /Atividade atualizada/.test(document.getElementById('toast').textContent));
+    await pg.waitForFunction(() => !document.querySelector('details.card[open]'));   // a lista é redesenhada depois de salvar: espera terminar para não atropelar o teste seguinte
+    const a11 = env.ctx.getAtividade_('A11'); assert.strictEqual(a11.inscricoes_abertas, 'SIM'); assert.strictEqual(a11.exige_inscricao, 'SIM');
+    env.ctx.updateRow_('Atividades', a11._row, { inscricoes_abertas: 'NAO', exige_inscricao: 'NAO' });   // restaura para os demais testes
+  });
   await t('atividades: valor inválido de vagas é recusado com mensagem', async () => {
     await pg.fill('#min-A16', '9999'); await pg.evaluate(() => { document.getElementById('max-A16').type = 'text'; }); await pg.fill('#max-A16', 'abc');
     await pg.click('.card:has(#max-A16) button:has-text("Salvar")'); await pg.waitForFunction(() => /número inteiro/.test(document.getElementById('toast').textContent));
