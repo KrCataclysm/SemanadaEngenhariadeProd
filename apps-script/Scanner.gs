@@ -95,11 +95,18 @@ function scanLote_(p) {
     var conf = {};
     readAll_(SHEETS.IA).forEach(function (r) { if (r.status === 'CONFIRMADA' || r.status === 'FILA') conf[r.inscrito_id + '|' + r.atividade_id] = r.status; });
     var estado = {};
-    function refazEstado() {
-      estado = {};
-      port.forEach(function (r) { if (r.status !== 'ANULADO') estado[r.inscrito_id + '|' + dia_(r.dia)] = r.tipo; });
+    /** ENTRADA/SAÍDA seguem a ordem do HORÁRIO da leitura (não a de chegada ao servidor): dois aparelhos, um deles offline, enviam fora de ordem. */
+    function reordenar(inscId, dia) {
+      var grupo = port.filter(function (r) { return String(r.inscrito_id) === String(inscId) && dia_(r.dia) === dia && r.status !== 'ANULADO'; })
+        .sort(function (a, b) { return Number(a.ts) - Number(b.ts) || a._row - b._row; });
+      grupo.forEach(function (r, i) {
+        var t = i % 2 === 0 ? 'ENTRADA' : 'SAIDA';
+        if (r.tipo !== t) { updateRow_(SHEETS.PORTARIA, r._row, { tipo: t }); r.tipo = t; }
+      });
+      var chave = inscId + '|' + dia;
+      if (grupo.length) estado[chave] = grupo[grupo.length - 1].tipo; else delete estado[chave];
     }
-    refazEstado();
+    port.forEach(function (r) { if (r.status !== 'ANULADO') estado[r.inscrito_id + '|' + dia_(r.dia)] = r.tipo; });
     var presentes = {};
     pres.forEach(function (r) { if (r.status !== 'ANULADO') presentes[r.inscrito_id + '|' + r.atividade_id] = r; });
 
@@ -113,7 +120,7 @@ function scanLote_(p) {
           if (alvo.r.status !== 'ANULADO') {
             updateRow_(alvo.aba, alvo.r._row, { status: 'ANULADO' });
             alvo.r.status = 'ANULADO';
-            if (alvo.aba === SHEETS.PORTARIA) refazEstado();
+            if (alvo.aba === SHEETS.PORTARIA) reordenar(alvo.r.inscrito_id, dia_(alvo.r.dia));
             else delete presentes[alvo.r.inscrito_id + '|' + alvo.r.atividade_id];
           }
           return { clientId: cid, resultado: 'ANULADO' };
@@ -128,13 +135,13 @@ function scanLote_(p) {
           var dia = String(it.dia || '');
           if (!/^\d{4}-\d{2}-\d{2}$/.test(dia)) return { clientId: cid, resultado: 'DADOS_INVALIDOS' };
           var chave = insc.id + '|' + dia;
-          var tipo = it.tipo === 'ENTRADA' || it.tipo === 'SAIDA' ? it.tipo : (estado[chave] === 'ENTRADA' ? 'SAIDA' : 'ENTRADA');
+          var tipo = estado[chave] === 'ENTRADA' ? 'SAIDA' : 'ENTRADA';   // provisório: reordenar() ajusta pela ordem dos horários
           var linha = { inscrito_id: insc.id, dia: dia, tipo: tipo, data_hora: fmtTs_(ts), operador: operador, status: 'VALIDO',
             client_id: cid, ts: ts, local_ms: Number(it.localMs) || '', server_ms: Date.now() - t0 };
           appendObj_(SHEETS.PORTARIA, linha);
           linha._row = sheet_(SHEETS.PORTARIA).getLastRow();
           port.push(linha); if (cid) clientes[cid] = { aba: SHEETS.PORTARIA, r: linha };
-          estado[chave] = tipo;
+          reordenar(insc.id, dia); tipo = linha.tipo;
           return { clientId: cid, resultado: 'REGISTRADO', tipo: tipo, nome: insc.nome, horario: horaTs_(ts) };
         }
         if (it.modo === 'ATIVIDADE') {

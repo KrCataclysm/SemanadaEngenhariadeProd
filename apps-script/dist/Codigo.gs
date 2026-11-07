@@ -128,6 +128,7 @@ var MSG = {
   invalido: 'Não foi possível concluir a inscrição, pois há dados ausentes ou inválidos. Revise os campos destacados e tente novamente.',
   cancelada: 'Esta matrícula possui uma inscrição cancelada. Para regularizar a situação, ' + 'entre em contato com a CAEPRO pelo Instagram (@caeproufpi) ou pelo e-mail caepro.ufpi1@gmail.com.',
   jaInscrito: 'Esta matrícula já possui inscrição na Semana de Engenharia de Produção. Reenviamos a confirmação, com o QR Code, para o e-mail cadastrado na inscrição original (%EMAIL%). O envio pode levar alguns minutos. ' + CONTATO_TXT,
+  jaInscritoLimite: 'Esta matrícula já possui inscrição na Semana de Engenharia de Produção. A confirmação, com o QR Code, já foi enviada ao e-mail cadastrado na inscrição original (%EMAIL%) e não será reenviada novamente por aqui. Verifique a caixa de entrada e a de spam. ' + CONTATO_TXT,
   sucesso: 'Sua inscrição na Semana de Engenharia de Produção foi realizada com sucesso. Seu QR Code está exibido abaixo: salve-o ou faça uma captura de tela, pois será necessário apresentá-lo na entrada e na saída de cada dia do evento. Enviamos também um e-mail de confirmação, que pode demorar alguns minutos para chegar. Caso o e-mail não chegue, verifique a caixa de spam e confira se o endereço informado está correto. ' + CONTATO_TXT,
   tokenInvalido: 'Não foi possível identificar sua inscrição. Utilize o link pessoal enviado no e-mail de confirmação. ' + CONTATO_TXT,
   atividadeFechada: 'As inscrições nesta atividade não estão abertas no momento.',
@@ -141,6 +142,7 @@ var MSG = {
 
 var PRIORIDADE_EMAIL = { CONFIRMACAO: 0, PROMOCAO: 1, FILA: 2, ATIVIDADE: 3 };
 var MAX_TENTATIVAS_EMAIL = 6;
+var MAX_CONFIRMACOES = 3;   // confirmação original + até 2 reenvios pedidos pelo formulário (o painel não tem esse limite)
 
 // ===== Db =====
 /** Acesso à planilha como "tabelas" de objetos. */
@@ -512,13 +514,14 @@ function register_(p) {
       alert_('DUPLICIDADE', d.matricula + '|' + hoje_(),
         'Tentativa de nova inscrição com matrícula já cadastrada: ' + d.matricula + ' (' + existente.nome + ').');
       if (existente.status !== 'ATIVA') return { ok: false, code: 'CANCELADA', mensagem: MSG.cancelada };
-      var recente = readAll_(SHEETS.OUTBOX).some(function (o) {
-        return o.inscrito_id === existente.id && o.tipo === 'CONFIRMACAO' && o.status === 'PENDENTE';
-      });
-      if (!recente) enqueueEmail_(existente.id, 'CONFIRMACAO');
+      // Reenvio da confirmação limitado (evita que alguém digite a matrícula de outra pessoa várias vezes e encha o e-mail dela / gaste a cota diária).
+      var envios = readAll_(SHEETS.OUTBOX).filter(function (o) { return o.inscrito_id === existente.id && o.tipo === 'CONFIRMACAO'; });
+      var pendente = envios.some(function (o) { return o.status === 'PENDENTE'; });
+      var limite = envios.length >= MAX_CONFIRMACOES;
+      if (!pendente && !limite) enqueueEmail_(existente.id, 'CONFIRMACAO');
       return {
         ok: true, status: 'JA_INSCRITO', inscritoId: existente.id,
-        mensagem: MSG.jaInscrito.replace('%EMAIL%', maskEmail_(existente.email))
+        mensagem: (limite ? MSG.jaInscritoLimite : MSG.jaInscrito).replace('%EMAIL%', maskEmail_(existente.email))
       };
     }
     var id = nextId_('I', SHEETS.INSC);
@@ -1124,11 +1127,18 @@ function scanLote_(p) {
     var conf = {};
     readAll_(SHEETS.IA).forEach(function (r) { if (r.status === 'CONFIRMADA' || r.status === 'FILA') conf[r.inscrito_id + '|' + r.atividade_id] = r.status; });
     var estado = {};
-    function refazEstado() {
-      estado = {};
-      port.forEach(function (r) { if (r.status !== 'ANULADO') estado[r.inscrito_id + '|' + dia_(r.dia)] = r.tipo; });
+    /** ENTRADA/SAÍDA seguem a ordem do HORÁRIO da leitura (não a de chegada ao servidor): dois aparelhos, um deles offline, enviam fora de ordem. */
+    function reordenar(inscId, dia) {
+      var grupo = port.filter(function (r) { return String(r.inscrito_id) === String(inscId) && dia_(r.dia) === dia && r.status !== 'ANULADO'; })
+        .sort(function (a, b) { return Number(a.ts) - Number(b.ts) || a._row - b._row; });
+      grupo.forEach(function (r, i) {
+        var t = i % 2 === 0 ? 'ENTRADA' : 'SAIDA';
+        if (r.tipo !== t) { updateRow_(SHEETS.PORTARIA, r._row, { tipo: t }); r.tipo = t; }
+      });
+      var chave = inscId + '|' + dia;
+      if (grupo.length) estado[chave] = grupo[grupo.length - 1].tipo; else delete estado[chave];
     }
-    refazEstado();
+    port.forEach(function (r) { if (r.status !== 'ANULADO') estado[r.inscrito_id + '|' + dia_(r.dia)] = r.tipo; });
     var presentes = {};
     pres.forEach(function (r) { if (r.status !== 'ANULADO') presentes[r.inscrito_id + '|' + r.atividade_id] = r; });
 
@@ -1142,7 +1152,7 @@ function scanLote_(p) {
           if (alvo.r.status !== 'ANULADO') {
             updateRow_(alvo.aba, alvo.r._row, { status: 'ANULADO' });
             alvo.r.status = 'ANULADO';
-            if (alvo.aba === SHEETS.PORTARIA) refazEstado();
+            if (alvo.aba === SHEETS.PORTARIA) reordenar(alvo.r.inscrito_id, dia_(alvo.r.dia));
             else delete presentes[alvo.r.inscrito_id + '|' + alvo.r.atividade_id];
           }
           return { clientId: cid, resultado: 'ANULADO' };
@@ -1157,13 +1167,13 @@ function scanLote_(p) {
           var dia = String(it.dia || '');
           if (!/^\d{4}-\d{2}-\d{2}$/.test(dia)) return { clientId: cid, resultado: 'DADOS_INVALIDOS' };
           var chave = insc.id + '|' + dia;
-          var tipo = it.tipo === 'ENTRADA' || it.tipo === 'SAIDA' ? it.tipo : (estado[chave] === 'ENTRADA' ? 'SAIDA' : 'ENTRADA');
+          var tipo = estado[chave] === 'ENTRADA' ? 'SAIDA' : 'ENTRADA';   // provisório: reordenar() ajusta pela ordem dos horários
           var linha = { inscrito_id: insc.id, dia: dia, tipo: tipo, data_hora: fmtTs_(ts), operador: operador, status: 'VALIDO',
             client_id: cid, ts: ts, local_ms: Number(it.localMs) || '', server_ms: Date.now() - t0 };
           appendObj_(SHEETS.PORTARIA, linha);
           linha._row = sheet_(SHEETS.PORTARIA).getLastRow();
           port.push(linha); if (cid) clientes[cid] = { aba: SHEETS.PORTARIA, r: linha };
-          estado[chave] = tipo;
+          reordenar(insc.id, dia); tipo = linha.tipo;
           return { clientId: cid, resultado: 'REGISTRADO', tipo: tipo, nome: insc.nome, horario: horaTs_(ts) };
         }
         if (it.modo === 'ATIVIDADE') {

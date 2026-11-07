@@ -556,6 +556,26 @@ test('e-mail: botão "Escolher atividades" aparece só quando há atividade aber
   assert.strictEqual(e.emailsDe(1).length, 1, 'quem já recebeu o e-mail não ganha e-mail extra quando as atividades abrem');
 });
 
+console.log('Situações reais (achadas na simulação do evento)');
+test('inscrição repetida com a matrícula de outra pessoa: reenvio da confirmação limitado (não enche o e-mail nem gasta a cota)', () => {
+  const e = novo(); e.abrir(); e.reg(1);
+  for (let i = 0; i < 10; i++) e.ctx.register_({ nome: 'Outra Pessoa Silva', curso: 'EP', periodo: '1º', matricula: '20240001', email: 'x@exemplo.com' });
+  assert.strictEqual(e.tabela('Fila_Email').filter(o => o.tipo === 'CONFIRMACAO').length, 3, 'original + 2 reenvios');
+  const r = e.ctx.register_({ nome: 'Outra Pessoa Silva', curso: 'EP', periodo: '1º', matricula: '20240001', email: 'x@exemplo.com' });
+  assert(r.ok && r.status === 'JA_INSCRITO' && /não será reenviada/.test(r.mensagem), 'mensagem de limite');
+  assert.strictEqual(e.ctx.adminReenviarQr_({ id: e.insc(1).id, operador: 'Lilian' }).ok, true, 'o painel continua podendo reenviar');
+});
+test('portaria: leituras de dois aparelhos chegando fora de ordem recebem ENTRADA/SAÍDA pelo horário; desfazer reordena', () => {
+  const e = scan(); const t0 = Date.now(), tk = e.token(1), mk = (ts, cid) => e.por(1, { ts, clientId: cid, dia: '2026-11-11' });
+  e.lote([mk(t0 + 3 * 3600e3, 'saida-online')]);                     // a saída (11h) chega primeiro, do aparelho online
+  e.lote([mk(t0, 'entrada-offline')]);                               // a entrada (8h) chega depois, do aparelho que estava offline
+  const l = e.tabela('Portaria').filter(x => x.status === 'VALIDO').sort((a, b) => a.ts - b.ts);
+  assert.deepStrictEqual(Array.from(l.map(x => x.tipo + '@' + x.client_id)), ['ENTRADA@entrada-offline', 'SAIDA@saida-online'], 'ordem pelo horário, não pela chegada');
+  e.ctx.recalcularPermanencia_(); assert(Math.abs(Number(e.tabela('Certificados').find(c => c.inscrito_id === e.insc(1).id).horas) - 3) < 0.01, '3 horas de permanência');
+  e.lote([{ kind: 'undo', clientId: 'entrada-offline' }]);           // desfazer a entrada: a saída restante vira a única leitura (ENTRADA) e fica pendente
+  assert.deepStrictEqual(Array.from(e.tabela('Portaria').filter(x => x.status === 'VALIDO').map(x => x.tipo)), ['ENTRADA']);
+});
+
 console.log('Controle do administrador');
 test('admin: registro de alterações lista só ações do painel (quem/quando/o quê), mais recentes primeiro', () => {
   const e = admin(); const id = e.insc(1).id;
