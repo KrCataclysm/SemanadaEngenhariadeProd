@@ -72,6 +72,7 @@ let ok = 0; const t = async (nome, fn) => { try { await fn(); ok++; console.log(
     await pg.click('details.card summary'); await pg.waitForSelector('#ab-A11'); assert.strictEqual(await pg.isChecked('#ex-A11'), false);
     await pg.check('#ab-A11'); assert.strictEqual(await pg.isChecked('#ex-A11'), true, 'abrir marca exige');
     await pg.click('div.card:has(#ab-A11) button:has-text("Salvar")'); await pg.waitForFunction(() => /Atividade atualizada/.test(document.getElementById('toast').textContent));
+    await pg.waitForFunction(() => !document.querySelector('details.card[open]'));   // a lista é redesenhada depois de salvar: espera terminar para não atropelar o teste seguinte
     const a11 = env.ctx.getAtividade_('A11'); assert.strictEqual(a11.inscricoes_abertas, 'SIM'); assert.strictEqual(a11.exige_inscricao, 'SIM');
     env.ctx.updateRow_('Atividades', a11._row, { inscricoes_abertas: 'NAO', exige_inscricao: 'NAO' });   // restaura para os demais testes
   });
