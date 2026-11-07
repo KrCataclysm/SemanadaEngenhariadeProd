@@ -240,25 +240,36 @@
     chamar('admin_atividades').then(function (r) {
       if (!ok(r)) return; S.ativs = r.atividades;
       raiz.appendChild(h('p', { class: 'contato', text: 'Altere vagas e abertura e clique em Salvar. Aumentar as vagas promove a fila de espera automaticamente. Vagas máximas vazias significam sem limite.' }));
-      r.atividades.filter(function (a) { return a.exige; }).forEach(function (a) {
+      var cartao = function (a) {
         var max = h('input', { id: 'max-' + a.id, class: 'num', type: 'number', min: '0', max: '9999', value: a.vagas_max === '' ? '' : String(a.vagas_max), inputmode: 'numeric' });
         var min = h('input', { id: 'min-' + a.id, class: 'num', type: 'number', min: '0', max: '9999', value: a.vagas_min === '' ? '' : String(a.vagas_min), inputmode: 'numeric' });
         var aberta = h('input', { id: 'ab-' + a.id, type: 'checkbox' }); aberta.checked = a.aberta;
+        var exige = h('input', { id: 'ex-' + a.id, type: 'checkbox' }); exige.checked = a.exige;
+        aberta.addEventListener('change', function () { if (aberta.checked) exige.checked = true; });   // abrir a inscrição implica exigir inscrição
         var lista = h('div', { class: 'topo-1', 'aria-live': 'polite' });
-        raiz.appendChild(h('div', { class: 'card' }, [
+        return h('div', { class: 'card' }, [
           h('div', { class: 'linha' }, [h('h2', { class: 'grow', text: a.titulo }), badge(a.aberta ? 'Inscrições abertas' : 'Inscrições fechadas', a.aberta ? 'ok' : 'lot')]),
           h('p', { class: 'sub', text: a.id + ' · ' + a.dia + ' · ' + a.inicio + ' às ' + a.fim }),
           h('p', {}, ['Confirmados: ', h('strong', { text: String(a.ocupadas) }), ' · Vagas restantes: ', h('strong', { text: String(a.restantes) }), ' · Na fila: ', h('strong', { text: String(a.na_fila) })]),
           h('div', { class: 'linha' }, [
             h('div', {}, [h('label', { for: max.id, text: 'Vagas máximas' }), max]), h('div', {}, [h('label', { for: min.id, text: 'Vagas mínimas' }), min]),
+            h('label', { class: 'chk', for: exige.id }, [exige, 'Exige inscrição prévia']),
             h('label', { class: 'chk', for: aberta.id }, [aberta, 'Inscrições abertas'])]),
           h('div', { class: 'linha topo-1' }, [
             h('button', { type: 'button', text: 'Salvar', onclick: function () {
-              chamar('admin_atividade_set', { id: a.id, campos: { vagas_max: max.value.trim(), vagas_min: min.value.trim(), aberta: aberta.checked } }).then(function (x) {
+              chamar('admin_atividade_set', { id: a.id, campos: { vagas_max: max.value.trim(), vagas_min: min.value.trim(), aberta: aberta.checked, exige: exige.checked } }).then(function (x) {
                 if (ok(x, x && x.semMudancas ? 'Nenhuma alteração a salvar.' : 'Atividade atualizada.')) carregarAtividades(); }); } }),
             h('button', { type: 'button', class: 'sec', text: 'Ver inscritos', onclick: function () { verInscritos(a, lista); } })]),
-          lista]));
-      });
+          lista]);
+      };
+      r.atividades.filter(function (a) { return a.exige; }).forEach(function (a) { raiz.appendChild(cartao(a)); });
+      var outras = r.atividades.filter(function (a) { return !a.exige; });
+      if (outras.length) {
+        var det = h('details', { class: 'card' }, [h('summary', { text: 'Atividades sem inscrição prévia (' + outras.length + '): palestras, mesas, credenciamento…' }),
+          h('p', { class: 'contato', text: 'Para abrir inscrição em uma destas, marque "Exige inscrição prévia" (ou "Inscrições abertas", que já marca a anterior) e clique em Salvar.' })]);
+        outras.forEach(function (a) { det.appendChild(cartao(a)); });
+        raiz.appendChild(det);
+      }
     });
   }
   function verInscritos(a, box) {

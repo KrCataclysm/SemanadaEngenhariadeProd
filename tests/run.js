@@ -585,5 +585,17 @@ test('admin: cópia de segurança sob demanda e troca do PIN do scanner (regras,
   assert(e.adm('admin_log').itens.some(x => x.evento === 'set_pin_scanner'));
 });
 
+test('admin: abrir a inscrição de atividade sem "exige inscrição" também marca exige (aparece para os participantes); exige pode ser editado', () => {
+  const e = admin(); const id = 'A11';   // palestra: exige_inscricao = NAO
+  assert.strictEqual(e.ctx.getAtividade_(id).exige_inscricao, 'NAO');
+  assert(!e.ctx.getMe_({ token: e.token(1) }).atividades.some(a => a.id === id));
+  assert.strictEqual(e.adm('admin_atividade_set', { id, campos: { aberta: true } }).ok, true);
+  assert.strictEqual(e.ctx.getAtividade_(id).exige_inscricao, 'SIM'); assert.strictEqual(e.ctx.getAtividade_(id).inscricoes_abertas, 'SIM');
+  assert(e.ctx.getMe_({ token: e.token(1) }).atividades.some(a => a.id === id && a.aberta), 'aparece para o participante');
+  assert.strictEqual(e.enroll(1, id).ok, true);
+  e.adm('admin_atividade_set', { id, campos: { aberta: false } }); assert.strictEqual(e.ctx.getAtividade_(id).exige_inscricao, 'SIM', 'fechar não desmarca exige');
+  e.adm('admin_atividade_set', { id: 'A12', campos: { exige: false } }); assert.strictEqual(e.ctx.getAtividade_('A12').exige_inscricao, 'NAO');
+});
+
 console.log(`\n${passed} ok, ${failed} falharam`);
 process.exit(failed ? 1 : 0);
