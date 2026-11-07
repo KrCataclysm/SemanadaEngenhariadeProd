@@ -51,7 +51,8 @@ test('inscrição válida cria registro, envia e-mail com QR inline e mede o tem
   assert(m.htmlBody.includes('cid:qr') && m.inlineImages.qr.bytes.length > 100);
   assert(m.attachments && m.attachments.length === 1 && /^QRCode-.*\.gif$/.test(m.attachments[0].name) && m.attachments[0].bytes.length > 100, 'QR também em anexo');
   assert(m.htmlBody.includes('Semana de Engenharia de Produção') && m.htmlBody.includes('caeproufpi'));
-  assert(m.htmlBody.includes('atividades.html?t=' + r.token));
+  assert(!m.htmlBody.includes('atividades.html') && /Novidades em breve/.test(m.htmlBody) && m.htmlBody.includes('instagram.com/caeproufpi'), 'sem atividade aberta: sem botão de atividades, com aviso do Instagram');
+  assert(m.htmlBody.includes('qr.html?t=' + r.token) && /Novidades em breve/.test(m.body));
   assert(e.tabela('Log').some(l => l.evento === 'email_enviado'));
   assert(r.mensagem.includes('pode demorar'));
 });
@@ -496,7 +497,7 @@ test('colunas de texto livre ficam formatadas como texto na planilha', () => {
 test('SITE_URL vazio na planilha: o e-mail mantém o botão (endereço padrão) e a migração preenche o campo', () => {
   const e = novo(); e.abrir(); e.setCfg('SITE_URL', '');
   e.reg(1);
-  assert(e.sent[0].htmlBody.includes('/inscricao/atividades.html?t='), 'botão ausente no e-mail');
+  assert(e.sent[0].htmlBody.includes('/inscricao/qr.html?t='), 'botão do QR ausente no e-mail');
   assert(e.sent[0].htmlBody.includes('https://krcataclysm.github.io/SemanadaEngenhariadeProd'));
   e.ctx.preencherPadroes_(); assert.strictEqual(e.ctx.getConfig_().SITE_URL, 'https://krcataclysm.github.io/SemanadaEngenhariadeProd');
   e.setCfg('SITE_URL', 'https://outro.exemplo/site/'); e.ctx.preencherPadroes_();
@@ -541,6 +542,18 @@ test('admin: gerar novo QR invalida o anterior (scanner, página do participante
   assert(e.ctx.readAll_('Log').some(l => l.evento === 'admin_novo_qr' && /Admin Teste/.test(l.detalhe)));
   assert(!JSON.stringify(e.adm('admin_ficha', { id })).includes(novo), 'token nunca vai para o painel');
   e.adm('admin_cancelar_inscrito', { id }); assert.strictEqual(e.adm('admin_novo_qr', { id }).ok, false);
+});
+
+test('e-mail: botão "Escolher atividades" aparece só quando há atividade aberta (ou a pessoa já tem atividades), sem e-mail extra', () => {
+  const e = novo(); e.abrir(); e.reg(1);
+  assert(!e.sent[0].htmlBody.includes('atividades.html') && !e.sent[0].body.includes('Escolher atividades'));
+  e.ativ('A16', { vagas_max: 5, inscricoes_abertas: 'SIM' });
+  e.reg(2); const m2 = e.sent[e.sent.length - 1];
+  assert(m2.htmlBody.includes('/inscricao/atividades.html?t=' + e.token(2)) && m2.body.includes('Escolher atividades:') && !/Novidades em breve/.test(m2.htmlBody), 'com atividade aberta o botão aparece');
+  e.enroll(2, 'A16'); e.ativ('A16', { inscricoes_abertas: 'NAO' });   // pessoa já tem atividade: o e-mail da atividade mantém o acesso
+  const antes = e.sent.length; e.ctx.processOutbox_(10);
+  const emAtiv = e.sent.slice(antes).find(x => x.to === 'p2@exemplo.com'); assert(!emAtiv || emAtiv.htmlBody.includes('atividades.html?t='));
+  assert.strictEqual(e.emailsDe(1).length, 1, 'quem já recebeu o e-mail não ganha e-mail extra quando as atividades abrem');
 });
 
 console.log('Controle do administrador');

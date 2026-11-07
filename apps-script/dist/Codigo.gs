@@ -891,14 +891,23 @@ function buildEmail_(insc, tipo, atividade) {
     ? '<p style="margin:20px 0 6px;font-weight:700;color:' + COR.azul + '">Suas atividades</p><ul style="margin:0;padding-left:20px">' +
       lista.map(function (x) { return '<li style="margin-bottom:6px">' + esc_(x) + '</li>'; }).join('') + '</ul>'
     : '';
+  // O botão "Escolher atividades" só aparece quando há atividade com inscrição aberta (ou a pessoa já tem atividades). Senão, orienta a acompanhar o Instagram.
+  var temAbertas = readAll_(SHEETS.ATIV).some(function (a) {
+    return String(a.exige_inscricao).toUpperCase() === 'SIM' && String(a.inscricoes_abertas).toUpperCase() === 'SIM';
+  });
+  var mostrarAtiv = !!link && (temAbertas || lista.length > 0);
+  var instagram = cfg.INSTAGRAM_CAEPRO || 'https://www.instagram.com/caeproufpi';
+  var novidadesHtml = !mostrarAtiv
+    ? '<p style="margin:20px 0 0;line-height:1.5">Novidades em breve: acompanhe o Instagram da CAEPRO para mais informações: <a href="' + esc_(instagram) + '" style="color:' + COR.laranja + ';font-weight:700">@caeproufpi</a>.</p>'
+    : '';
   var botaoQr = linkQr
     ? '<p style="margin:14px 0 0;font-size:13px;color:' + COR.grafite + '">Se a imagem do QR Code não aparecer, abra-o pelo botão abaixo:</p>' +
       '<p style="margin:10px 0 0"><a href="' + esc_(linkQr) + '" style="background:' + COR.azul + ';color:#ffffff;text-decoration:none;font-weight:700;padding:12px 22px;border-radius:6px;display:inline-block">Abrir meu QR Code</a></p>'
     : '';
-  var botao = link
-    ? '<p style="margin:24px 0"><a href="' + esc_(link) + '" style="background:#C2501A;color:#ffffff;text-decoration:none;font-weight:700;padding:12px 22px;border-radius:6px;display:inline-block">Escolher atividades e consultar fila</a></p>' +
-      '<p style="font-size:12px;color:#555555;margin:0 0 8px">Os links deste e-mail são pessoais: não os compartilhe.</p>'
-    : '';
+  var botao = (mostrarAtiv
+    ? '<p style="margin:24px 0"><a href="' + esc_(link) + '" style="background:#C2501A;color:#ffffff;text-decoration:none;font-weight:700;padding:12px 22px;border-radius:6px;display:inline-block">Escolher atividades e consultar fila</a></p>'
+    : novidadesHtml) +
+    ((mostrarAtiv || linkQr) ? '<p style="font-size:12px;color:#555555;margin:8px 0 8px">Os links deste e-mail são pessoais: não os compartilhe.</p>' : '');
   var logo = '<img src="cid:logo" alt="" width="56" height="56" style="border-radius:50%;background:#fff;display:block">';
 
   var html =
@@ -926,7 +935,7 @@ function buildEmail_(insc, tipo, atividade) {
     '</td></tr></table></div>';
 
   var texto = 'Prezado(a) ' + insc.nome + ',\n\n' + intro + '\n\n' + (lista.length ? 'Suas atividades:\n- ' + lista.join('\n- ') + '\n\n' : '') +
-    (linkQr ? 'Abrir meu QR Code: ' + linkQr + '\n' : '') + (link ? 'Escolher atividades: ' + link + '\n\n' : '') +
+    (linkQr ? 'Abrir meu QR Code: ' + linkQr + '\n' : '') + (mostrarAtiv ? 'Escolher atividades: ' + link + '\n\n' : 'Novidades em breve: acompanhe o Instagram da CAEPRO para mais informações: ' + instagram + '\n\n') +
     'Apresente o QR Code (anexo ao e-mail) na entrada e na saída em cada dia do evento. Ele é pessoal e intransferível.\n\n' + CONTATO_TXT;
   return { assunto: assunto, html: html, texto: texto };
 }

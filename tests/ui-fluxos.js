@@ -57,7 +57,8 @@ let ok = 0; const t = async (nome, fn) => { try { await fn(); ok++; console.log(
     await pg.click('#enviar'); await pg.waitForSelector('#msg:not(.oculto)');
     if (await pg.isVisible('#sucesso')) { /* o navegador demorou mais de 2s: também é válido */ } else assert(/Aguarde alguns segundos/.test(await pg.textContent('#msg')));
     await pg.waitForTimeout(2200); await pg.click('#enviar'); await pg.waitForSelector('#sucesso:not(.oculto)');
-    assert(/^data:image\/gif/.test(await pg.getAttribute('#qrImg', 'src'))); assert(/atividades\.html\?t=[a-f0-9]{32}$/.test(await pg.getAttribute('#btnLink', 'href'))); await c.close();
+    const tx = await pg.textContent('#sucesso'); assert(!/link pessoal/i.test(tx) && !(await pg.isVisible('#btnLink', { timeout: 100 }).catch(() => false)), 'sem "link pessoal"'); assert(/Novidades em breve/.test(tx) && (await pg.getAttribute('#sucesso a[href*=instagram]', 'href')).includes('instagram.com/caeproufpi'));
+    assert(/^data:image\/gif/.test(await pg.getAttribute('#qrImg', 'src'))); assert.strictEqual(await pg.evaluate(() => /^[a-f0-9]{32}$/.test(JSON.parse(localStorage.getItem('meuQr')).t)), true, 'QR guardado no aparelho'); await c.close();
   });
   await t('sistema ocupado: repete sozinho e conclui a inscrição', async () => {
     const [c, pg] = await novo(); await pg.goto(B + '/inscricao/'); await preencher(pg, '0003'); await pg.waitForTimeout(2200);
@@ -98,12 +99,20 @@ let ok = 0; const t = async (nome, fn) => { try { await fn(); ok++; console.log(
     const [c, pg] = await novo(); await pg.goto(B + '/inscricao/qr.html?t=' + base.token); await pg.waitForSelector('#ok:not(.oculto)');
     assert(/^data:image\/gif/.test(await pg.getAttribute('#qrImg', 'src'))); assert(/^data:image\/gif/.test(await pg.getAttribute('#qrBaixar', 'href')));
     assert.strictEqual(new URL(pg.url()).search, '', 'token fora do endereço'); assert.strictEqual(await pg.getAttribute('#btnAtividades', 'href'), 'atividades.html');
+    await pg.waitForSelector('#boxAtiv:not(.oculto)'); assert(await pg.isHidden('#novidades'), 'com atividade aberta aparece o botão');
     await pg.waitForFunction(() => /Maria da Silva Souza/.test(document.getElementById('quem').textContent));   // nome confirmado pelo sistema
     assert.strictEqual(await pg.evaluate(() => JSON.parse(localStorage.getItem('meuQr')).t), base.token);
     await pg.goto(B + '/inscricao/qr.html'); await pg.waitForSelector('#ok:not(.oculto)');   // reabre sem o link: usa o QR guardado
     await pg.goto(B + '/inscricao/atividades.html'); await pg.waitForFunction(() => /Olá, Maria/.test(document.getElementById('saudacao').textContent));   // atividades também usam o token guardado
     const [c2, p2] = await novo(); await p2.goto(B + '/inscricao/qr.html?t=lixo'); await p2.waitForSelector('#invalido:not(.oculto)'); assert(!(await p2.isVisible('#ok')));
     assert.strictEqual(await p2.evaluate(() => localStorage.getItem('meuQr')), null, 'token inválido não é guardado'); await c2.close(); await c.close();
+  });
+  await t('QR: "Escolher atividades" some quando não há atividade aberta e mostra o aviso do Instagram', async () => {
+    const a = env.ctx.getAtividade_('A16'); env.ctx.updateRow_('Atividades', a._row, { inscricoes_abertas: 'NAO' });
+    const novoIns = env.ctx.register_({ nome: 'Sem Atividade Alguma Silva', curso: 'EP', periodo: '3º', matricula: '20250077', email: 'sa@exemplo.com' });
+    const [c, pg] = await novo(); await pg.goto(B + '/inscricao/qr.html?t=' + novoIns.token); await pg.waitForSelector('#ok:not(.oculto)'); await pg.waitForTimeout(600);
+    assert(await pg.isHidden('#boxAtiv')); assert(await pg.isVisible('#novidades')); assert(/Novidades em breve/.test(await pg.textContent('#novidades')));
+    env.ctx.updateRow_('Atividades', a._row, { inscricoes_abertas: 'SIM' }); await pg.reload(); await pg.waitForSelector('#boxAtiv:not(.oculto)'); assert(await pg.isHidden('#novidades')); await c.close();
   });
   await t('QR: modo ampliado abre/fecha, abre sem internet e QR substituído/cancelado vira aviso', async () => {
     const [c, pg] = await novo(); await pg.goto(B + '/inscricao/qr.html?t=' + base.token); await pg.waitForSelector('#ok:not(.oculto)');
