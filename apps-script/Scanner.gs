@@ -24,7 +24,8 @@ function checkPin_(pin, chave, prefixo) {
   // As tentativas erradas valem só dentro de uma janela de 10 minutos: erros isolados, em horas diferentes, não somam.
   var desde = Number(props.getProperty(kDesde) || 0);
   if (desde && Date.now() - desde > 10 * 60000) { props.setProperty(kFalhas, '0'); props.setProperty(kDesde, '0'); }
-  if (String(pin === undefined || pin === null ? '' : pin).trim() === real) { props.setProperty(kFalhas, '0'); props.setProperty(kDesde, '0'); return 'OK'; }
+  // Só texto vale como PIN (listas, objetos e números são recusados).
+  if (typeof pin === 'string' && pin.trim() === real) { props.setProperty(kFalhas, '0'); props.setProperty(kDesde, '0'); return 'OK'; }
   var f = Number(props.getProperty(kFalhas) || 0) + 1;
   props.setProperty(kFalhas, String(f));
   if (f === 1) props.setProperty(kDesde, String(Date.now()));
@@ -126,7 +127,7 @@ function scanLote_(p) {
           return { clientId: cid, resultado: 'ANULADO' };
         }
         if (cid && clientes[cid]) return { clientId: cid, resultado: 'REGISTRADO', repetido: true };
-        var insc = it.h ? (/^[a-f0-9]{64}$/.test(String(it.h)) ? porHash[String(it.h)] : null) : porToken[String(it.token || '')];   // `token` só para versões antigas do scanner
+        var insc = it.h ? (typeof it.h === 'string' && /^[a-f0-9]{64}$/.test(it.h) ? porHash[it.h] : null) : (typeof it.token === 'string' ? porToken[it.token] : null);   // `token` só para versões antigas do scanner
         if (!insc) return { clientId: cid, resultado: 'TOKEN_INVALIDO' };
         if (insc.status !== 'ATIVA') return { clientId: cid, resultado: 'CANCELADA', nome: insc.nome };
         var ts = tsValido_(it.ts);

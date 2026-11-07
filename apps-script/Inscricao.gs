@@ -31,7 +31,8 @@ function findInscritoByMatricula_(matricula) {
 }
 
 function findInscritoByToken_(token) {
-  token = String(token || '').trim();
+  if (typeof token !== 'string') return null;
+  token = token.trim();
   if (!/^[a-f0-9]{32}$/.test(token)) return null;
   var lista = readAll_(SHEETS.INSC);
   for (var i = 0; i < lista.length; i++) {
