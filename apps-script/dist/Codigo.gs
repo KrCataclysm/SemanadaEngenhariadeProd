@@ -35,6 +35,7 @@ function garantirMigracao_() {
       if (props.getProperty('VERSAO_APLICADA') === CODIGO_VERSAO) return false;
       setup_();
       preencherPadroes_();
+      try { preencherNomes_(false); ocultarColunasTecnicas_(); } catch (e) { log_('erro_nomes', 0, String(e)); }
       try { ensureTriggers_(); } catch (e) { log_('erro_gatilhos', 0, String(e)); }
       props.setProperty('VERSAO_APLICADA', CODIGO_VERSAO);
       log_('migracao', 0, 'versão ' + CODIGO_VERSAO);
@@ -50,6 +51,40 @@ function garantirMigracao_() {
 function preencherPadroes_() {
   var linha = readAll_(SHEETS.CONFIG).filter(function (r) { return String(r.chave).trim() === 'SITE_URL'; })[0];
   if (linha && !String(linha.valor).trim()) { updateRow_(SHEETS.CONFIG, linha._row, { valor: SITE_URL_PADRAO }); resetConfigCache_(); }
+}
+
+function abasComNome_() { return [SHEETS.IA, SHEETS.OUTBOX, SHEETS.PORTARIA, SHEETS.PRES, SHEETS.PERM, SHEETS.CERT]; }   // função (não variável): a ordem de carga dos arquivos não importa
+
+/**
+ * Escreve o NOME ao lado do código (inscrito_id) nas abas de movimento, para a equipe identificar a pessoa sem consultar a aba Inscritos.
+ * Com todos=false só preenche as células vazias (linhas antigas e linhas gravadas por versões anteriores do código); com todos=true
+ * reescreve tudo (depois de editar um nome).
+ */
+function preencherNomes_(todos) {
+  var nomes = {}; readAll_(SHEETS.INSC).forEach(function (r) { nomes[String(r.id)] = String(r.nome); });
+  abasComNome_().forEach(function (aba) {
+    var sh = sheet_(aba), ultima = sh.getLastRow(); if (ultima < 2) return;
+    var h = HEADERS[aba], cId = h.indexOf('inscrito_id') + 1, cNome = h.indexOf('nome') + 1, n = ultima - 1;
+    var ids = sh.getRange(2, cId, n, 1).getValues(), atuais = sh.getRange(2, cNome, n, 1).getValues(), novos = [], mudou = false;
+    for (var i = 0; i < n; i++) {
+      var atual = String(atuais[i][0] === undefined || atuais[i][0] === null ? '' : atuais[i][0]), nm = nomes[String(ids[i][0])];
+      var v = (todos || atual === '') && nm !== undefined ? nm : atual;
+      if (v !== atual) mudou = true;
+      novos.push([v]);
+    }
+    if (mudou) { sh.getRange(2, cNome, n, 1).setValues(novos); invalidar_(aba); }
+  });
+}
+
+/** Esconde (uma única vez) as colunas técnicas de Portaria e Presença, para o nome ficar logo depois do status. Os dados continuam lá. */
+function ocultarColunasTecnicas_() {
+  var props = PropertiesService.getScriptProperties();
+  if (props.getProperty('COLUNAS_OCULTAS_V1') === 'SIM') return;
+  [SHEETS.PORTARIA, SHEETS.PRES].forEach(function (aba) {
+    var sh = sheet_(aba), h = HEADERS[aba];
+    ['client_id', 'ts', 'local_ms', 'server_ms'].forEach(function (c) { try { sh.hideColumns(h.indexOf(c) + 1); } catch (e) { /* sem suporte */ } });
+  });
+  props.setProperty('COLUNAS_OCULTAS_V1', 'SIM');
 }
 
 // ===== Config =====
@@ -80,15 +115,15 @@ HEADERS[SHEETS.ATIV] = ['id', 'dia', 'inicio', 'fim', 'titulo', 'tipo', 'vagas_m
   'inscricoes_abertas', 'exige_inscricao', 'ocupadas', 'restantes', 'na_fila'];
 HEADERS[SHEETS.INSC] = ['id', 'token', 'nome', 'curso', 'periodo', 'matricula', 'email',
   'data_hora', 'status', 'status_email', 'tempo_envio_ms'];
-HEADERS[SHEETS.IA] = ['id', 'inscrito_id', 'atividade_id', 'data_hora', 'status', 'posicao'];
+HEADERS[SHEETS.IA] = ['id', 'inscrito_id', 'atividade_id', 'data_hora', 'status', 'posicao', 'nome'];
 HEADERS[SHEETS.OUTBOX] = ['id', 'inscrito_id', 'tipo', 'atividade_id', 'status', 'criado_em',
-  'enviado_em', 'tempo_ms', 'tentativas', 'erro'];
+  'enviado_em', 'tempo_ms', 'tentativas', 'erro', 'nome'];
 HEADERS[SHEETS.ALERTAS] = ['data_hora', 'tipo', 'chave', 'mensagem', 'notificado'];
 HEADERS[SHEETS.LOG] = ['data_hora', 'evento', 'duracao_ms', 'detalhe'];
-HEADERS[SHEETS.PORTARIA] = ['inscrito_id', 'dia', 'tipo', 'data_hora', 'operador', 'status', 'client_id', 'ts', 'local_ms', 'server_ms'];
-HEADERS[SHEETS.PRES] = ['inscrito_id', 'atividade_id', 'data_hora', 'operador', 'status', 'client_id', 'ts', 'local_ms', 'server_ms'];
-HEADERS[SHEETS.PERM] = ['inscrito_id', 'dia', 'minutos', 'saida_pendente'];
-HEADERS[SHEETS.CERT] = ['inscrito_id', 'horas', 'observacao'];
+HEADERS[SHEETS.PORTARIA] = ['inscrito_id', 'dia', 'tipo', 'data_hora', 'operador', 'status', 'client_id', 'ts', 'local_ms', 'server_ms', 'nome'];
+HEADERS[SHEETS.PRES] = ['inscrito_id', 'atividade_id', 'data_hora', 'operador', 'status', 'client_id', 'ts', 'local_ms', 'server_ms', 'nome'];
+HEADERS[SHEETS.PERM] = ['inscrito_id', 'dia', 'minutos', 'saida_pendente', 'nome'];
+HEADERS[SHEETS.CERT] = ['inscrito_id', 'horas', 'observacao', 'nome'];
 HEADERS[SHEETS.BASE] = ['inscrito_id', 'nome', 'curso', 'periodo', 'matricula', 'email', 'data_inscricao', 'status', 'status_email',
   'atividades_confirmadas', 'atividades_em_fila', 'presencas_em_atividades', 'dias_presentes', 'minutos_permanencia', 'horas', 'saida_pendente'];
 
@@ -96,14 +131,14 @@ HEADERS[SHEETS.BASE] = ['inscrito_id', 'nome', 'curso', 'periodo', 'matricula', 
 var TEXT_COLUMNS = {};
 TEXT_COLUMNS[SHEETS.ATIV] = ['id', 'dia', 'inicio', 'fim'];
 TEXT_COLUMNS[SHEETS.INSC] = ['id', 'token', 'nome', 'curso', 'periodo', 'matricula', 'email', 'data_hora'];
-TEXT_COLUMNS[SHEETS.IA] = ['id', 'inscrito_id', 'atividade_id', 'data_hora'];
-TEXT_COLUMNS[SHEETS.OUTBOX] = ['id', 'inscrito_id', 'atividade_id', 'criado_em', 'enviado_em'];
+TEXT_COLUMNS[SHEETS.IA] = ['id', 'inscrito_id', 'atividade_id', 'data_hora', 'nome'];
+TEXT_COLUMNS[SHEETS.OUTBOX] = ['id', 'inscrito_id', 'atividade_id', 'criado_em', 'enviado_em', 'nome'];
 TEXT_COLUMNS[SHEETS.ALERTAS] = ['data_hora', 'chave'];
 TEXT_COLUMNS[SHEETS.LOG] = ['data_hora'];
-TEXT_COLUMNS[SHEETS.PORTARIA] = ['inscrito_id', 'dia', 'data_hora', 'client_id'];
-TEXT_COLUMNS[SHEETS.PRES] = ['inscrito_id', 'atividade_id', 'data_hora', 'client_id'];
-TEXT_COLUMNS[SHEETS.PERM] = ['inscrito_id', 'dia'];
-TEXT_COLUMNS[SHEETS.CERT] = ['inscrito_id'];
+TEXT_COLUMNS[SHEETS.PORTARIA] = ['inscrito_id', 'dia', 'data_hora', 'client_id', 'nome'];
+TEXT_COLUMNS[SHEETS.PRES] = ['inscrito_id', 'atividade_id', 'data_hora', 'client_id', 'nome'];
+TEXT_COLUMNS[SHEETS.PERM] = ['inscrito_id', 'dia', 'nome'];
+TEXT_COLUMNS[SHEETS.CERT] = ['inscrito_id', 'nome'];
 TEXT_COLUMNS[SHEETS.BASE] = ['inscrito_id', 'matricula', 'data_inscricao'];
 
 /** Endereço do site publicado (GitHub Pages). Usado quando SITE_URL está vazio na aba Config. */
@@ -368,6 +403,7 @@ function tick() {
   resetConfigCache_();
   try { garantirMigracao_(); ensureTriggers_(); } catch (e) { log_('erro_tick_migracao', 0, String(e)); }
   try { promoteAll_(); } catch (e) { log_('erro_tick_promote', 0, String(e)); }
+  try { preencherNomes_(false); } catch (e) { log_('erro_tick_nomes', 0, String(e)); }
   try { checkMinimos_(); } catch (e) { log_('erro_tick_minimos', 0, String(e)); }
   try { processOutbox_(40); } catch (e) { log_('erro_tick_outbox', 0, String(e)); }
   try { sendAlertDigest_(); } catch (e) { log_('erro_tick_digest', 0, String(e)); }
@@ -487,8 +523,9 @@ function novoToken_() {
 
 /** Enfileira e-mail evitando repetição de confirmação em sequência. */
 function enqueueEmail_(inscritoId, tipo, atividadeId) {
+  var quem = readAll_(SHEETS.INSC).filter(function (i) { return String(i.id) === String(inscritoId); })[0];
   appendObj_(SHEETS.OUTBOX, {
-    id: nextId_('E', SHEETS.OUTBOX), inscrito_id: inscritoId, tipo: tipo,
+    id: nextId_('E', SHEETS.OUTBOX), inscrito_id: inscritoId, nome: quem ? quem.nome : '', tipo: tipo,
     atividade_id: atividadeId || '', status: 'PENDENTE', criado_em: now_(), tentativas: 0
   });
 }
@@ -627,7 +664,7 @@ function enrollCore_(inscrito, atividade) {
   var ocupadas = inscricoesDaAtividade_(atividade.id, 'CONFIRMADA').length;
   var id = nextId_('X', SHEETS.IA);
   if (max === null || ocupadas < max) {
-    appendObj_(SHEETS.IA, { id: id, inscrito_id: inscrito.id, atividade_id: atividade.id, data_hora: now_(), status: 'CONFIRMADA', posicao: '' });
+    appendObj_(SHEETS.IA, { id: id, inscrito_id: inscrito.id, nome: inscrito.nome, atividade_id: atividade.id, data_hora: now_(), status: 'CONFIRMADA', posicao: '' });
     enqueueEmail_(inscrito.id, 'ATIVIDADE', atividade.id);
     if (max !== null && ocupadas + 1 >= max) {
       alert_('VAGAS_ESGOTADAS', atividade.id, 'Vagas esgotadas em: ' + atividade.titulo + ' (' + max + ' vagas).');
@@ -635,7 +672,7 @@ function enrollCore_(inscrito, atividade) {
     return { ok: true, status: 'CONFIRMADA', atividadeId: atividade.id };
   }
   var posicao = inscricoesDaAtividade_(atividade.id, 'FILA').length + 1;
-  appendObj_(SHEETS.IA, { id: id, inscrito_id: inscrito.id, atividade_id: atividade.id, data_hora: now_(), status: 'FILA', posicao: posicao });
+  appendObj_(SHEETS.IA, { id: id, inscrito_id: inscrito.id, nome: inscrito.nome, atividade_id: atividade.id, data_hora: now_(), status: 'FILA', posicao: posicao });
   enqueueEmail_(inscrito.id, 'FILA', atividade.id);
   return { ok: true, status: 'FILA', posicao: posicao, atividadeId: atividade.id };
 }
@@ -1170,7 +1207,7 @@ function scanLote_(p) {
           if (!/^\d{4}-\d{2}-\d{2}$/.test(dia)) return { clientId: cid, resultado: 'DADOS_INVALIDOS' };
           var chave = insc.id + '|' + dia;
           var tipo = estado[chave] === 'ENTRADA' ? 'SAIDA' : 'ENTRADA';   // provisório: reordenar() ajusta pela ordem dos horários
-          var linha = { inscrito_id: insc.id, dia: dia, tipo: tipo, data_hora: fmtTs_(ts), operador: operador, status: 'VALIDO',
+          var linha = { inscrito_id: insc.id, nome: insc.nome, dia: dia, tipo: tipo, data_hora: fmtTs_(ts), operador: operador, status: 'VALIDO',
             client_id: cid, ts: ts, local_ms: Number(it.localMs) || '', server_ms: Date.now() - t0 };
           appendObj_(SHEETS.PORTARIA, linha);
           linha._row = sheet_(SHEETS.PORTARIA).getLastRow();
@@ -1187,7 +1224,7 @@ function scanLote_(p) {
           if (String(at.exige_inscricao).toUpperCase() === 'SIM' && sit !== 'CONFIRMADA' && !it.forcar) {
             return { clientId: cid, resultado: 'NAO_INSCRITO', nome: insc.nome, situacao: sit };
           }
-          var l2 = { inscrito_id: insc.id, atividade_id: at.id, data_hora: fmtTs_(ts), operador: operador, status: 'VALIDO',
+          var l2 = { inscrito_id: insc.id, nome: insc.nome, atividade_id: at.id, data_hora: fmtTs_(ts), operador: operador, status: 'VALIDO',
             client_id: cid, ts: ts, local_ms: Number(it.localMs) || '', server_ms: Date.now() - t0 };
           appendObj_(SHEETS.PRES, l2);
           l2._row = sheet_(SHEETS.PRES).getLastRow();
@@ -1209,17 +1246,18 @@ function scanLote_(p) {
 /** Soma pares ENTRADA→SAÍDA por pessoa/dia e gera Certificados. */
 function recalcularPermanencia_() {
   var grupos = calcularPermanencia_();
+  var nomes = {}; readAll_(SHEETS.INSC).forEach(function (r) { nomes[String(r.id)] = String(r.nome); });
   var perm = [], total = {}, pendPessoa = {}, pendentes = 0;
   Object.keys(grupos).sort().forEach(function (k) {
     var g = grupos[k];
     var m = Math.round(g.min * 10) / 10;
-    perm.push([g.insc, g.dia, m, g.pend ? 'SIM' : 'NAO']);
+    perm.push([g.insc, g.dia, m, g.pend ? 'SIM' : 'NAO', nomes[g.insc] || '']);
     total[g.insc] = (total[g.insc] || 0) + g.min;
     if (g.pend) { pendPessoa[g.insc] = (pendPessoa[g.insc] || 0) + 1; pendentes++; }
   });
   var cert = Object.keys(total).sort().map(function (id) {
     return [id, Math.round(total[id] / 60 * 100) / 100,
-      pendPessoa[id] ? 'Saída não registrada em ' + pendPessoa[id] + ' dia(s): conferir antes de emitir o certificado.' : ''];
+      pendPessoa[id] ? 'Saída não registrada em ' + pendPessoa[id] + ' dia(s): conferir antes de emitir o certificado.' : '', nomes[id] || ''];
   });
   substituirLinhas_(SHEETS.PERM, perm);
   substituirLinhas_(SHEETS.CERT, cert);
@@ -1482,6 +1520,7 @@ function adminEditar_(p) {
     var emailMudou = mudancas.email !== undefined;
     if (emailMudou) mudancas.status_email = 'PENDENTE';
     updateRow_(SHEETS.INSC, i._row, mudancas);
+    if (mudancas.nome !== undefined) { try { preencherNomes_(true); } catch (e) { log_('erro_nomes', 0, String(e)); } }   // o novo nome vale em todas as abas
     if (emailMudou && i.status === 'ATIVA') enqueueEmail_(i.id, 'CONFIRMACAO');
     adminLog_(p, 'editar', i.id + ' — ' + antes.join('; '));
     return { ok: true, emailReenviado: emailMudou && i.status === 'ATIVA' };

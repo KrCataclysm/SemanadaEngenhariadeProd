@@ -25,15 +25,15 @@ HEADERS[SHEETS.ATIV] = ['id', 'dia', 'inicio', 'fim', 'titulo', 'tipo', 'vagas_m
   'inscricoes_abertas', 'exige_inscricao', 'ocupadas', 'restantes', 'na_fila'];
 HEADERS[SHEETS.INSC] = ['id', 'token', 'nome', 'curso', 'periodo', 'matricula', 'email',
   'data_hora', 'status', 'status_email', 'tempo_envio_ms'];
-HEADERS[SHEETS.IA] = ['id', 'inscrito_id', 'atividade_id', 'data_hora', 'status', 'posicao'];
+HEADERS[SHEETS.IA] = ['id', 'inscrito_id', 'atividade_id', 'data_hora', 'status', 'posicao', 'nome'];
 HEADERS[SHEETS.OUTBOX] = ['id', 'inscrito_id', 'tipo', 'atividade_id', 'status', 'criado_em',
-  'enviado_em', 'tempo_ms', 'tentativas', 'erro'];
+  'enviado_em', 'tempo_ms', 'tentativas', 'erro', 'nome'];
 HEADERS[SHEETS.ALERTAS] = ['data_hora', 'tipo', 'chave', 'mensagem', 'notificado'];
 HEADERS[SHEETS.LOG] = ['data_hora', 'evento', 'duracao_ms', 'detalhe'];
-HEADERS[SHEETS.PORTARIA] = ['inscrito_id', 'dia', 'tipo', 'data_hora', 'operador', 'status', 'client_id', 'ts', 'local_ms', 'server_ms'];
-HEADERS[SHEETS.PRES] = ['inscrito_id', 'atividade_id', 'data_hora', 'operador', 'status', 'client_id', 'ts', 'local_ms', 'server_ms'];
-HEADERS[SHEETS.PERM] = ['inscrito_id', 'dia', 'minutos', 'saida_pendente'];
-HEADERS[SHEETS.CERT] = ['inscrito_id', 'horas', 'observacao'];
+HEADERS[SHEETS.PORTARIA] = ['inscrito_id', 'dia', 'tipo', 'data_hora', 'operador', 'status', 'client_id', 'ts', 'local_ms', 'server_ms', 'nome'];
+HEADERS[SHEETS.PRES] = ['inscrito_id', 'atividade_id', 'data_hora', 'operador', 'status', 'client_id', 'ts', 'local_ms', 'server_ms', 'nome'];
+HEADERS[SHEETS.PERM] = ['inscrito_id', 'dia', 'minutos', 'saida_pendente', 'nome'];
+HEADERS[SHEETS.CERT] = ['inscrito_id', 'horas', 'observacao', 'nome'];
 HEADERS[SHEETS.BASE] = ['inscrito_id', 'nome', 'curso', 'periodo', 'matricula', 'email', 'data_inscricao', 'status', 'status_email',
   'atividades_confirmadas', 'atividades_em_fila', 'presencas_em_atividades', 'dias_presentes', 'minutos_permanencia', 'horas', 'saida_pendente'];
 
@@ -41,14 +41,14 @@ HEADERS[SHEETS.BASE] = ['inscrito_id', 'nome', 'curso', 'periodo', 'matricula', 
 var TEXT_COLUMNS = {};
 TEXT_COLUMNS[SHEETS.ATIV] = ['id', 'dia', 'inicio', 'fim'];
 TEXT_COLUMNS[SHEETS.INSC] = ['id', 'token', 'nome', 'curso', 'periodo', 'matricula', 'email', 'data_hora'];
-TEXT_COLUMNS[SHEETS.IA] = ['id', 'inscrito_id', 'atividade_id', 'data_hora'];
-TEXT_COLUMNS[SHEETS.OUTBOX] = ['id', 'inscrito_id', 'atividade_id', 'criado_em', 'enviado_em'];
+TEXT_COLUMNS[SHEETS.IA] = ['id', 'inscrito_id', 'atividade_id', 'data_hora', 'nome'];
+TEXT_COLUMNS[SHEETS.OUTBOX] = ['id', 'inscrito_id', 'atividade_id', 'criado_em', 'enviado_em', 'nome'];
 TEXT_COLUMNS[SHEETS.ALERTAS] = ['data_hora', 'chave'];
 TEXT_COLUMNS[SHEETS.LOG] = ['data_hora'];
-TEXT_COLUMNS[SHEETS.PORTARIA] = ['inscrito_id', 'dia', 'data_hora', 'client_id'];
-TEXT_COLUMNS[SHEETS.PRES] = ['inscrito_id', 'atividade_id', 'data_hora', 'client_id'];
-TEXT_COLUMNS[SHEETS.PERM] = ['inscrito_id', 'dia'];
-TEXT_COLUMNS[SHEETS.CERT] = ['inscrito_id'];
+TEXT_COLUMNS[SHEETS.PORTARIA] = ['inscrito_id', 'dia', 'data_hora', 'client_id', 'nome'];
+TEXT_COLUMNS[SHEETS.PRES] = ['inscrito_id', 'atividade_id', 'data_hora', 'client_id', 'nome'];
+TEXT_COLUMNS[SHEETS.PERM] = ['inscrito_id', 'dia', 'nome'];
+TEXT_COLUMNS[SHEETS.CERT] = ['inscrito_id', 'nome'];
 TEXT_COLUMNS[SHEETS.BASE] = ['inscrito_id', 'matricula', 'data_inscricao'];
 
 /** Endereço do site publicado (GitHub Pages). Usado quando SITE_URL está vazio na aba Config. */

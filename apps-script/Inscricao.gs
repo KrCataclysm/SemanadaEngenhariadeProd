@@ -47,8 +47,9 @@ function novoToken_() {
 
 /** Enfileira e-mail evitando repetição de confirmação em sequência. */
 function enqueueEmail_(inscritoId, tipo, atividadeId) {
+  var quem = readAll_(SHEETS.INSC).filter(function (i) { return String(i.id) === String(inscritoId); })[0];
   appendObj_(SHEETS.OUTBOX, {
-    id: nextId_('E', SHEETS.OUTBOX), inscrito_id: inscritoId, tipo: tipo,
+    id: nextId_('E', SHEETS.OUTBOX), inscrito_id: inscritoId, nome: quem ? quem.nome : '', tipo: tipo,
     atividade_id: atividadeId || '', status: 'PENDENTE', criado_em: now_(), tentativas: 0
   });
 }

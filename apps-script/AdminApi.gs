@@ -127,6 +127,7 @@ function adminEditar_(p) {
     var emailMudou = mudancas.email !== undefined;
     if (emailMudou) mudancas.status_email = 'PENDENTE';
     updateRow_(SHEETS.INSC, i._row, mudancas);
+    if (mudancas.nome !== undefined) { try { preencherNomes_(true); } catch (e) { log_('erro_nomes', 0, String(e)); } }   // o novo nome vale em todas as abas
     if (emailMudou && i.status === 'ATIVA') enqueueEmail_(i.id, 'CONFIRMACAO');
     adminLog_(p, 'editar', i.id + ' — ' + antes.join('; '));
     return { ok: true, emailReenviado: emailMudou && i.status === 'ATIVA' };

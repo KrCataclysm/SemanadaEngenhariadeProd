@@ -12,6 +12,7 @@ function makeEnv(opts = {}) {
     setValues(v) { v.forEach((row, i) => row.forEach((x, j) => this.sh.set(this.r + i, this.c + j, x))); return this; }
     setValue(x) { this.sh.set(this.r, this.c, x); return this; }
     getValue() { return this.sh.get(this.r, this.c); }
+    getValues() { const o = []; for (let i = 0; i < this.nr; i++) { const l = []; for (let j = 0; j < this.nc; j++) l.push(this.sh.get(this.r + i, this.c + j)); o.push(l); } return o; }
     setFormula(f) { this.sh.set(this.r, this.c, f); return this; }
     getRow() { return this.r; } getColumn() { return this.c; } getNumRows() { return this.nr; } getNumColumns() { return this.nc; } getSheet() { return this.sh; }
     clearContent() { for (let i = 0; i < this.nr; i++) for (let j = 0; j < this.nc; j++) this.sh.set(this.r + i, this.c + j, ''); return this; }
@@ -26,7 +27,7 @@ function makeEnv(opts = {}) {
     getDataRange() { const w = Math.max(0, ...this.data.map(x => x.length)); return { getValues: () => this.data.map(r => { const o = r.slice(); while (o.length < w) o.push(''); return o; }) }; }
     appendRow(row) { this.data.push(row.slice()); }
     getLastRow() { return this.data.length; }
-    setFrozenRows() {} getName() { return this.name; } clear() { this.data = []; }
+    setFrozenRows() {} hideColumns(c) { (this.ocultas = this.ocultas || []).push(c); } getName() { return this.name; } clear() { this.data = []; }
   }
   const SpreadsheetApp = {
     getActiveSpreadsheet: () => ({
