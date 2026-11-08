@@ -177,6 +177,7 @@ var MSG = {
 
 var PRIORIDADE_EMAIL = { CONFIRMACAO: 0, PROMOCAO: 1, FILA: 2, ATIVIDADE: 3 };
 var MAX_TENTATIVAS_EMAIL = 6;
+var JANELA_DUPLICIDADE_MS = 20000;   // mesma pessoa lida duas vezes na portaria em menos de 20 s (ex.: dois aparelhos): a 2ª leitura é descartada
 var MAX_CONFIRMACOES = 3;   // confirmação original + até 2 reenvios pedidos pelo formulário (o painel não tem esse limite)
 
 // ===== Db =====
@@ -1206,6 +1207,8 @@ function scanLote_(p) {
           var dia = String(it.dia || '');
           if (!/^\d{4}-\d{2}-\d{2}$/.test(dia)) return { clientId: cid, resultado: 'DADOS_INVALIDOS' };
           var chave = insc.id + '|' + dia;
+          var vizinha = port.filter(function (r) { return String(r.inscrito_id) === String(insc.id) && dia_(r.dia) === dia && r.status !== 'ANULADO' && Math.abs(Number(r.ts) - ts) < JANELA_DUPLICIDADE_MS; })[0];
+          if (vizinha) return { clientId: cid, resultado: 'DUPLICADA', nome: insc.nome, tipo: vizinha.tipo, horario: horaTs_(Number(vizinha.ts)) };   // já lida há poucos segundos: não grava
           var tipo = estado[chave] === 'ENTRADA' ? 'SAIDA' : 'ENTRADA';   // provisório: reordenar() ajusta pela ordem dos horários
           var linha = { inscrito_id: insc.id, nome: insc.nome, dia: dia, tipo: tipo, data_hora: fmtTs_(ts), operador: operador, status: 'VALIDO',
             client_id: cid, ts: ts, local_ms: Number(it.localMs) || '', server_ms: Date.now() - t0 };

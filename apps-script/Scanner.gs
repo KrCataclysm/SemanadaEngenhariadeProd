@@ -136,6 +136,8 @@ function scanLote_(p) {
           var dia = String(it.dia || '');
           if (!/^\d{4}-\d{2}-\d{2}$/.test(dia)) return { clientId: cid, resultado: 'DADOS_INVALIDOS' };
           var chave = insc.id + '|' + dia;
+          var vizinha = port.filter(function (r) { return String(r.inscrito_id) === String(insc.id) && dia_(r.dia) === dia && r.status !== 'ANULADO' && Math.abs(Number(r.ts) - ts) < JANELA_DUPLICIDADE_MS; })[0];
+          if (vizinha) return { clientId: cid, resultado: 'DUPLICADA', nome: insc.nome, tipo: vizinha.tipo, horario: horaTs_(Number(vizinha.ts)) };   // já lida há poucos segundos: não grava
           var tipo = estado[chave] === 'ENTRADA' ? 'SAIDA' : 'ENTRADA';   // provisório: reordenar() ajusta pela ordem dos horários
           var linha = { inscrito_id: insc.id, nome: insc.nome, dia: dia, tipo: tipo, data_hora: fmtTs_(ts), operador: operador, status: 'VALIDO',
             client_id: cid, ts: ts, local_ms: Number(it.localMs) || '', server_ms: Date.now() - t0 };

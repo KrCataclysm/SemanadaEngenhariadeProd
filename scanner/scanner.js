@@ -91,7 +91,10 @@
       (r.resultados || []).forEach(function (x) {
         feitos[x.clientId] = true;
         var it = lote.filter(function (l) { return l.clientId === x.clientId; })[0];
-        if (['TOKEN_INVALIDO', 'CANCELADA', 'NAO_INSCRITO', 'ERRO', 'DADOS_INVALIDOS'].indexOf(x.resultado) >= 0 && it && it.kind !== 'undo') {
+        if (x.resultado === 'DUPLICADA' && it && it.efeito) {   // o sistema descartou a leitura: desfaz o efeito local para a tela não ficar um passo à frente
+          reaplicar({ kind: 'undo', efeito: it.efeito });
+        }
+        if (['TOKEN_INVALIDO', 'CANCELADA', 'NAO_INSCRITO', 'ERRO', 'DADOS_INVALIDOS', 'DUPLICADA'].indexOf(x.resultado) >= 0 && it && it.kind !== 'undo') {
           S.problemas.push({ nome: x.nome || (S.porToken[it.h || it.token] || {}).nome || 'QR desconhecido', motivo: x.resultado, quando: hora() });
           renderProblemas();
         }
@@ -114,7 +117,7 @@
   function renderProblemas() {
     mostrar('problemas', S.problemas.length > 0);
     var box = $('listaProb'); box.textContent = '';
-    var txt = { TOKEN_INVALIDO: 'QR não reconhecido', CANCELADA: 'Inscrição cancelada', NAO_INSCRITO: 'Sem inscrição na atividade', ERRO: 'Erro ao gravar', DADOS_INVALIDOS: 'Dados inválidos' };
+    var txt = { TOKEN_INVALIDO: 'QR não reconhecido', CANCELADA: 'Inscrição cancelada', NAO_INSCRITO: 'Sem inscrição na atividade', ERRO: 'Erro ao gravar', DADOS_INVALIDOS: 'Dados inválidos', DUPLICADA: 'Leitura repetida (menos de 20 s) ignorada' };
     S.problemas.slice(-8).forEach(function (p) {
       var d = document.createElement('div'); d.className = 'busca-item';
       d.textContent = p.quando + ' — ' + p.nome + ': ' + (txt[p.motivo] || p.motivo); box.appendChild(d);
