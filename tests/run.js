@@ -226,7 +226,8 @@ test('lista: traz inscritos, atividades e estado atual', () => {
 });
 test('portaria alterna ENTRADA/SAÍDA por dia e grava segundos, operador e tempo', () => {
   const e = scan();
-  const r = e.lote([e.por(1), e.por(1), e.por(1), e.por(1, { dia: '2026-11-12' })]).resultados;
+  const T = Date.now();
+  const r = e.lote([e.por(1, { ts: T }), e.por(1, { ts: T + 60000 }), e.por(1, { ts: T + 120000 }), e.por(1, { dia: '2026-11-12', ts: T })]).resultados;
   assert.deepStrictEqual(r.map(x => x.tipo), ['ENTRADA', 'SAIDA', 'ENTRADA', 'ENTRADA']);
   const linha = e.tabela('Portaria')[0];
   assert(/^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d$/.test(linha.data_hora)); assert.strictEqual(linha.operador, 'Ana'); assert.strictEqual(linha.local_ms, 12);
@@ -242,10 +243,23 @@ test('QR inválido e inscrição cancelada são recusados', () => {
   assert.strictEqual(r[0].resultado, 'TOKEN_INVALIDO'); assert.strictEqual(r[1].resultado, 'CANCELADA'); assert.strictEqual(e.tabela('Portaria').length, 0);
 });
 test('desfazer anula a leitura (sem apagar) e restaura a alternância', () => {
-  const e = scan(); const a = e.por(1), b = e.por(1);
+  const e = scan(); const T = Date.now(); const a = e.por(1, { ts: T }), b = e.por(1, { ts: T + 60000 });
   e.lote([a, b]); e.lote([{ kind: 'undo', clientId: b.clientId }]);
   assert.strictEqual(e.tabela('Portaria')[1].status, 'ANULADO');
-  assert.strictEqual(e.lote([e.por(1)]).resultados[0].tipo, 'SAIDA');
+  assert.strictEqual(e.lote([e.por(1, { ts: T + 120000 })]).resultados[0].tipo, 'SAIDA');
+});
+test('portaria: mesma pessoa lida de novo em menos de 20 s (dois aparelhos) é descartada; depois disso vira SAÍDA; desfazer libera nova leitura', () => {
+  const e = scan(); const T = Date.now();
+  const a = e.por(1, { ts: T, operador: 'Ana' }), b = e.por(1, { ts: T + 5000, operador: 'Bia' });
+  const r = e.lote([a, b]).resultados;
+  assert.strictEqual(r[0].tipo, 'ENTRADA'); assert.strictEqual(r[1].resultado, 'DUPLICADA'); assert.strictEqual(r[1].tipo, 'ENTRADA'); assert(r[1].nome);
+  assert.strictEqual(e.tabela('Portaria').length, 1);
+  assert.strictEqual(e.lote([e.por(1, { ts: T + 19000 })]).resultados[0].resultado, 'DUPLICADA');
+  const sai = e.lote([e.por(1, { ts: T + 21000 })]).resultados[0]; assert.strictEqual(sai.resultado, 'REGISTRADO'); assert.strictEqual(sai.tipo, 'SAIDA');
+  const outra = e.lote([e.por(2, { ts: T + 1000 })]).resultados[0]; assert.strictEqual(outra.tipo, 'ENTRADA');   // outra pessoa não é afetada
+  const c = e.por(3, { ts: T }); e.lote([c]); e.lote([{ kind: 'undo', clientId: c.clientId }]);
+  assert.strictEqual(e.lote([e.por(3, { ts: T + 2000 })]).resultados[0].tipo, 'ENTRADA');   // leitura anulada não conta como vizinha
+  assert.strictEqual(e.lote([e.por(1, { dia: '2026-11-12', ts: T })]).resultados[0].resultado, 'REGISTRADO');   // outro dia não conta
 });
 test('atividade: só ENTRADA, repetida = já registrado, sem inscrição = aviso, forçar registra', () => {
   const e = scan(); e.ativ('A16', { inscricoes_abertas: 'SIM' }); e.enroll(1, 'A16');

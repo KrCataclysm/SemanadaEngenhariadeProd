@@ -87,4 +87,5 @@ var MSG = {
 
 var PRIORIDADE_EMAIL = { CONFIRMACAO: 0, PROMOCAO: 1, FILA: 2, ATIVIDADE: 3 };
 var MAX_TENTATIVAS_EMAIL = 6;
+var JANELA_DUPLICIDADE_MS = 20000;   // mesma pessoa lida duas vezes na portaria em menos de 20 s (ex.: dois aparelhos): a 2ª leitura é descartada
 var MAX_CONFIRMACOES = 3;   // confirmação original + até 2 reenvios pedidos pelo formulário (o painel não tem esse limite)
