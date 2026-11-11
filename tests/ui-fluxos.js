@@ -89,6 +89,20 @@ let ok = 0; const t = async (nome, fn) => { try { await fn(); ok++; console.log(
     await pg.click('#btnSair'); await pg.waitForSelector('#login:not(.oculto)');
     assert.strictEqual(await pg.evaluate(() => localStorage.getItem('scanner_lista')), null); assert.strictEqual(await pg.evaluate(() => sessionStorage.getItem('scanner_pin')), null); await c.close();
   });
+  await t('scanner: mesma pessoa vista de novo em menos de 20 s não vira SAÍDA ("JÁ LIDO AGORA"); depois de 20 s vira SAÍDA; desfazer libera', async () => {
+    const [c, pg] = await novo(); await pg.goto(B + '/scanner/'); await pg.fill('#operador', 'Ana'); await pg.fill('#pin', '4321'); await pg.click('#btnLogin');
+    await pg.waitForSelector('#modo:not(.oculto)'); await pg.click('label:has(input[value="2026-11-11"]) span'); await pg.click('#btnIniciar'); await pg.waitForSelector('#scan:not(.oculto)');
+    const ler = () => pg.evaluate(tk => window.__scanner.processar(tk, { manual: true }), base.token);
+    const txt = () => pg.textContent('#res');
+    await ler(); await pg.waitForFunction(() => /ENTRADA/.test(document.getElementById('res').textContent), null, { timeout: 8000 });
+    await ler(); await pg.waitForFunction(() => /JÁ LIDO AGORA/.test(document.getElementById('res').textContent), null, { timeout: 8000 });
+    assert(!/SAÍDA/.test(await txt()), 'a segunda leitura imediata não pode virar SAÍDA');
+    await pg.evaluate(() => { const j = window.__scanner.estado.janela; Object.keys(j).forEach(k => { j[k] -= 21000; }); });
+    await ler(); await pg.waitForFunction(() => /SAÍDA/.test(document.getElementById('res').textContent), null, { timeout: 8000 });
+    await pg.click('#btnDesfazer'); await pg.waitForFunction(() => /DESFEITA/.test(document.getElementById('res').textContent), null, { timeout: 8000 });
+    await ler(); await pg.waitForFunction(() => /SAÍDA/.test(document.getElementById('res').textContent), null, { timeout: 8000 });   // após desfazer a janela é liberada
+    await c.close();
+  });
   await t('scanner: QR inexistente continua sendo recusado com mensagem clara', async () => {
     const [c, pg] = await novo(); await pg.goto(B + '/scanner/'); await pg.fill('#operador', 'Ana'); await pg.fill('#pin', '4321'); await pg.click('#btnLogin');
     await pg.waitForSelector('#modo:not(.oculto)'); await pg.click('label:has(input[value="2026-11-11"]) span'); await pg.click('#btnIniciar'); await pg.waitForSelector('#scan:not(.oculto)');
