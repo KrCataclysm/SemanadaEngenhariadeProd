@@ -11,7 +11,7 @@
   var S = {
     pin: '', operador: '', modo: 'PORTARIA', dia: '', atividadeId: '',
     lista: null, porToken: {}, porId: {}, atv: {}, estado: {}, pres: {}, ia: {},
-    fila: [], enviando: false, backoff: 0, ultimo: null, recente: {}, leituras: 0, online: true, problemas: []
+    fila: [], enviando: false, backoff: 0, ultimo: null, recente: {}, janela: {}, leituras: 0, online: true, problemas: []
   };
 
   // ---------- utilitários ----------
@@ -175,6 +175,14 @@
     var item = { kind: 'scan', modo: S.modo, h: token, operador: S.operador, clientId: uuid(), ts: Date.now() };
     if (S.modo === 'PORTARIA') {
       var key = insc.id + '|' + S.dia, prev = S.estado[key] || null;
+      // Mesma pessoa vista de novo em menos de 20 s (QR parado na frente da câmera, outro aparelho): não vira SAÍDA. Cada nova visão renova a janela.
+      var antes = S.janela[key];
+      if (!opcoes.forcar && antes && agora - antes < 20000) {
+        S.janela[key] = agora;
+        resultado('warn', 'JÁ LIDO AGORA', insc.nome, 'Leitura repetida: nada foi registrado. Para registrar a saída, afaste o QR e leia de novo depois de 20 segundos. ' + ident(insc));
+        feedback('warn'); return;
+      }
+      S.janela[key] = agora;
       var tipo = prev === 'ENTRADA' ? 'SAIDA' : 'ENTRADA';
       item.dia = S.dia; item.efeito = { t: 'estado', key: key, val: tipo, prev: prev };
       S.estado[key] = tipo;
@@ -211,6 +219,7 @@
     var undo = { kind: 'undo', clientId: u.clientId, efeito: u.efeito };
     reaplicar(undo);
     S.leituras = Math.max(0, S.leituras - 1);
+    if (u.efeito && u.efeito.t === 'estado') delete S.janela[u.efeito.key];   // leitura desfeita não conta na janela de 20 s
     S.fila.push(undo); S.ultimo = null; salvarFila();
     resultado('warn', 'LEITURA DESFEITA', (S.porToken[u.h] || {}).nome || '', 'O registro foi anulado.');
     flush();
